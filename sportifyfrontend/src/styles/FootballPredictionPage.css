@@ -1,0 +1,211 @@
+/* Prediction page styles */
+.prediction-card {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border-radius: 15px;
+	color: white;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+.match-card {
+	background: white;
+	border-radius: 10px;
+	padding: 20px;
+	margin-bottom: 15px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+	border-left: 4px solid #28a745;
+	transition: box-shadow 0.2s ease;
+}
+
+.match-card:hover {
+	box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.team-logo {
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	object-fit: cover;
+	background-color: #f8f9fa;
+	background-image: url('/user/images/team-default.png');
+	background-size: cover;
+	background-position: center;
+	transition: none;
+	display: block;
+	margin: 0 auto;
+}
+
+/* Fallback for missing images */
+.team-logo[src=""] {
+	background-image: url('/user/images/team-default.png');
+}
+
+.team-logo:not([src]) {
+	background-image: url('/user/images/team-default.png');
+}
+
+/* Search and Filter Styles */
+.search-filter-card {
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	border: none;
+	border-radius: 15px;
+	box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.search-filter-card .form-group label {
+	font-weight: 600;
+	color: #495057;
+	margin-bottom: 8px;
+}
+
+.search-filter-card .form-control {
+	border-radius: 25px;
+	border: 2px solid #e9ecef;
+	padding: 10px 20px;
+	transition: all 0.3s ease;
+}
+
+.search-filter-card .form-control:focus {
+	border-color: #28a745;
+	box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.25);
+}
+
+.search-filter-card .btn {
+	border-radius: 25px;
+	padding: 10px 25px;
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+.search-filter-card .btn-primary {
+	background: linear-gradient(45deg, #28a745, #20c997);
+	border: none;
+}
+
+.search-filter-card .btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(40,167,69,0.3);
+}
+
+.match-item {
+	transition: all 0.3s ease;
+}
+
+.match-item.hidden {
+	display: none !important;
+}
+
+/* Autocomplete Styles */
+.autocomplete-container {
+	position: relative;
+	width: 100%;
+}
+
+.suggestions-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 2px solid #e9ecef;
+	border-top: none;
+	border-radius: 0 0 15px 15px;
+	max-height: 200px;
+	overflow-y: auto;
+	z-index: 1000;
+	display: none;
+	box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.suggestion-item {
+	padding: 12px 20px;
+	cursor: pointer;
+	border-bottom: 1px solid #f8f9fa;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+	background: linear-gradient(45deg, #28a745, #20c997);
+	color: white;
+}
+
+.suggestion-item:last-child {
+	border-bottom: none;
+}
+
+.suggestion-item .team-name {
+	font-weight: 600;
+	margin-right: 10px;
+}
+
+.suggestion-item .team-info {
+	font-size: 12px;
+	opacity: 0.8;
+}
+
+.suggestion-item .team-logo-small {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	margin-right: 10px;
+	object-fit: cover;
+}
+
+/* Custom Date Picker Styles */
+#customDateGroup .input-group {
+	border-radius: 25px;
+	overflow: hidden;
+}
+
+#customDateGroup .form-control {
+	border-radius: 25px 0 0 25px;
+	border-right: none;
+}
+
+#customDateGroup .btn {
+	border-radius: 0 25px 25px 0;
+	border-left: none;
+	background: #f8f9fa;
+	border-color: #e9ecef;
+	color: #6c757d;
+}
+
+#customDateGroup .btn:hover {
+	background: #e9ecef;
+	color: #495057;
+}
+
+/* Simple banner styles - no conflicting parent CSS */
+.hero-wrap.hero-wrap-2 {
+	height: 400px !important;
+	min-height: 400px !important;
+	background-size: cover !important;
+	background-position: center !important;
+	background-repeat: no-repeat !important;
+	background-attachment: fixed !important;
+}
+
+.hero-wrap .slider-text {
+	height: 750px !important;
+	min-height: 750px !important;
+	position: relative !important;
+}
+
+.prediction-btn {
+	background: linear-gradient(45deg, #28a745, #20c997);
+	border: none;
+	color: white;
+	padding: 10px 25px;
+	border-radius: 25px;
+	font-weight: bold;
+	transition: background-color 0.2s ease;
+}
+
+.prediction-btn:hover {
+	background: #28a745;
+	color: white;
+}

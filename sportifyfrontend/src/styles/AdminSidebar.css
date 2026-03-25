@@ -1,0 +1,12 @@
+.accordion-button::after {
+  display: none;
+}
+
+.accordion-button .caret-indicator {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.accordion-button:not(.collapsed) .caret-indicator {
+  transform: rotate(-180deg);
+}

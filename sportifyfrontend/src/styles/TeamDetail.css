@@ -1,0 +1,232 @@
+/* TeamDetail Component Styles */
+
+.team-detail-container {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.team-info-card {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.team-avatar {
+  height: 300px;
+  object-fit: cover;
+  border-radius: 15px 0 0 15px;
+}
+
+.team-name {
+  color: #2E7D32;
+  font-weight: bold;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.team-info-row {
+  margin-bottom: 0.5rem;
+}
+
+.team-info-label {
+  font-weight: 600;
+  color: #495057;
+  margin-right: 0.5rem;
+}
+
+.team-motto {
+  background-color: #e8f5e8;
+  padding: 1rem;
+  border-left: 4px solid #2E7D32;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.section-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  color: #2E7D32;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.member-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.member-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.boss-badge {
+  background: linear-gradient(45deg, #ffc107, #ffeb3b);
+  color: #333;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+}
+
+.pending-badge {
+  background: linear-gradient(45deg, #ff9800, #ffb74d);
+  color: white;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+}
+
+.pending-member-card {
+  border: 2px solid #ffc107;
+  background: linear-gradient(to right, #fff8e1, #ffffff);
+}
+
+.btn-action {
+  border-radius: 20px;
+  padding: 0.375rem 1rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-join {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  border: none;
+  color: white;
+}
+
+.btn-leave {
+  background: linear-gradient(45deg, #dc3545, #e74c3c);
+  border: none;
+  color: white;
+}
+
+.btn-approve {
+  background: linear-gradient(45deg, #28a745, #34ce57);
+  border: none;
+  color: white;
+}
+
+.btn-reject {
+  background: linear-gradient(45deg, #dc3545, #e74c3c);
+  border: none;
+  color: white;
+}
+
+.btn-promote {
+  background: linear-gradient(45deg, #ffc107, #ffca2c);
+  border: none;
+  color: #333;
+}
+
+.btn-kick {
+  background: linear-gradient(45deg, #6c757d, #868e96);
+  border: none;
+  color: white;
+}
+
+.user-info-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 4px solid #007bff;
+}
+
+.info-textarea {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: border-color 0.3s ease;
+  resize: vertical;
+}
+
+.info-textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.member-info {
+  font-size: 0.9rem;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.member-description {
+  background-color: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 3rem;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #f5c6cb;
+}
+
+.breadcrumb-custom {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.breadcrumb-custom a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb-custom a:hover {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .team-name {
+    font-size: 1.5rem;
+  }
+  
+  .team-avatar {
+    height: 200px;
+    border-radius: 15px 15px 0 0;
+  }
+  
+  .team-info-card .col-md-4,
+  .team-info-card .col-md-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  
+  .member-card {
+    margin-bottom: 1rem;
+  }
+}
