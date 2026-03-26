@@ -35,13 +35,13 @@ export default function Footer() {
                 <h2 className="ftco-heading-2">Chính sách và điều kiện</h2>
                 <ul className="list-unstyled">
                   <li>
-                    <Link to="/sportify/policy">
-                      <span className="fa fa-chevron-right mr-2"></span>Chính sách chung
+                    <Link to="/sportify/policy" className="d-flex align-items-center">
+                      <span className="fa fa-chevron-right mr-2"></span><span>Quy định chung</span>
                     </Link>
                   </li>
                   <li>
-                    <Link to="/sportify/regulations">
-                      <span className="fa fa-chevron-right mr-2"></span>Quy Định & Điều Kiện
+                    <Link to="/sportify/regulations" className="d-flex align-items-center">
+                      <span className="fa fa-chevron-right mr-2"></span><span>Quy Định & Điều Kiện</span>
                     </Link>
                   </li>
                 </ul>
@@ -49,11 +49,11 @@ export default function Footer() {
             </div>
             <div className="col-sm-12 col-md">
               <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2">Liên Hệ Nhanh</h2>
+                <h2 className="ftco-heading-2">Liên hệ </h2>
                 <ul className="list-unstyled">
                   <li>
                     <a href="/sportify/contact">
-                      <span className="fa fa-chevron-right mr-2"></span>Liên Hệ
+                      <span className="fa fa-chevron-right mr-2"></span>Liên hệ với chúng tôi
                     </a>
                   </li>
                 </ul>
@@ -96,7 +96,7 @@ export default function Footer() {
                   Bản quyền &copy; {new Date().getFullYear()} Bảo lưu mọi quyền | Mẫu này được thực hiện{" "}
                   <i className="fa fa-heart color-danger" aria-hidden="true"></i> bởi{" "}
                   <a href="/sportify/about" target="_blank">
-                    Team Ngọc Và Quí
+                    Đặng Đình Kiên 
                   </a>
                 </p>
               </div>

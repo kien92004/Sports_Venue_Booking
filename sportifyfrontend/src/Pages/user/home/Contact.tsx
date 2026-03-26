@@ -192,7 +192,7 @@ const Contact: React.FC = () => {
                   <div className="col-md-5 order-md-first d-flex align-items-stretch" style={{ border: '3px solid #2E7D32' }}>
                     <iframe
                       title="location"
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.7675889130314!2d106.68950957575302!3d10.829089789322925!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x317528f6e9e290ab%3A0xa322309091295c37!2zMTA0IMSQLiBUcuG6p24gQsOhIEdpYW8sIFBoxrDhu51uZyA1LCBHw7IgVuG6pXAsIFRow6BuaCBwaOG7kSBI4buTIENow60gTWluaCwgVmnhu4d0IE5hbQ!5e0!3m2!1svi!2s!4v1765182757073!5m2!1svi!2s"
+                      src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d2208.388551336548!2d105.74070047117719!3d21.0537224866712!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDAzJzEzLjQiTiAxMDXCsDQ0JzI5LjMiRQ!5e1!3m2!1svi!2s!4v1774518880927!5m2!1svi!2s"
                       style={{ border: 0, width: '100%', minHeight: '420px', flexGrow: 1 }}
                       allowFullScreen={true}
                       loading="lazy"
@@ -211,7 +211,7 @@ const Contact: React.FC = () => {
                     </div>
                     <div className="text">
                       <p>
-                        <span>Address: </span>104 Đ. Trần Bá Giao, Phường 5, Gò Vấp, Hồ Chí Minh, Việt Nam
+                        <span>Address: </span>13 ngõ 112/1 Nguyên Xá, Tây Tựu, Hà Nội, Việt Nam
                       </p>
                     </div>
                   </div>
@@ -223,7 +223,7 @@ const Contact: React.FC = () => {
                     </div>
                     <div className="text">
                       <p>
-                        <span>Phone:</span> 0366635625
+                        <span>Phone:</span> 0987738620
                       </p>
                     </div>
                   </div>
@@ -235,7 +235,7 @@ const Contact: React.FC = () => {
                     </div>
                     <div className="text">
                       <p>
-                        <span>Email:</span> <a href="mailto:info@yoursite.com">phamleducngoc123@gmail.com</a>
+                        <span>Email:</span> <a href="mailto:info@yoursite.com">dangdinhkien2k4@gmail.com</a>
                       </p>
                     </div>
                   </div>
