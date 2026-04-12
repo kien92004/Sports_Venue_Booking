@@ -1,0 +1,33 @@
+.saved-cards .card-item {
+  border: 2px solid #ddd;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.saved-cards .card-item.selected {
+  border-color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.05);
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+}
+
+.card-select {
+  margin-right: 10px;
+}
+
+.card-select input[type="radio"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #4CAF50; /* Màu xanh lá khi radio được chọn */
+}
+
+/* Hiệu ứng khi hover vào card có thể chọn */
+.saved-cards .card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}

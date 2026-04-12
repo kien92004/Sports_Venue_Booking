@@ -1,0 +1,14 @@
+../SportifyFrontend
+../vscode
+../history
+.gitattributes
+.gitignore
+target
+build
+Database
+*.log
+.idea
+.git
+bin
+.mvn
+TelosysTools

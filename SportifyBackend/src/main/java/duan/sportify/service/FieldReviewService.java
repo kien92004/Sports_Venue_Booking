@@ -1,0 +1,251 @@
+package duan.sportify.service;
+
+import duan.sportify.entities.ProductReview;
+import duan.sportify.entities.Field;
+import duan.sportify.Repository.FieldReviewRepository;
+import duan.sportify.dao.FieldDAO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Optional;
+
+@Service
+public class FieldReviewService {
+    
+    @Autowired
+    private FieldReviewRepository fieldReviewRepository;
+
+    @Autowired
+    private FieldDAO fieldDAO;
+    
+    // Lấy đánh giá theo field ID
+    public List<ProductReview> getReviewsByFieldId(Integer fieldId) {
+        return fieldReviewRepository.findByFieldIdAndStatusActive(fieldId);
+    }
+    
+    // Lấy đánh giá theo username
+    public List<ProductReview> getReviewsByUsername(String username) {
+        // Note: You might need to add this method to FieldReviewRepository if needed
+        return fieldReviewRepository.findAll().stream()
+                .filter(r -> r.getUsername().equals(username) && r.getStatus() == ProductReview.ReviewStatus.active)
+                .toList();
+    }
+    public List<ProductReview> getFieldReviewsByUsername(String username) {
+    return fieldReviewRepository.findFieldReviewsByUsername(username, ProductReview.ReviewStatus.active);
+}
+    // Tạo đánh giá mới
+    public ProductReview createReview(Integer fieldId, String username, String customerName, 
+                                    Integer rating, String comment, String images) {
+        // Kiểm tra user đã có đánh giá chưa
+        List<ProductReview> existingReviews = fieldReviewRepository.findByFieldIdAndUsernameAndStatusActive(fieldId, username);
+        
+        if (!existingReviews.isEmpty()) {
+            // Cập nhật đánh giá cũ thay vì tạo mới
+            ProductReview existingReview = existingReviews.get(0);
+            existingReview.setCustomerName(customerName);
+            existingReview.setRating(rating);
+            existingReview.setComment(comment);
+            existingReview.setImages(images);
+            existingReview.setUpdatedAt(java.time.LocalDateTime.now());
+            
+            System.out.println("🔄 Cập nhật đánh giá cũ cho user: " + username + ", field: " + fieldId);
+            return fieldReviewRepository.save(existingReview);
+        }
+        
+        // Tạo đánh giá mới
+        ProductReview review = new ProductReview();
+        review.setFieldId(fieldId);
+        review.setUsername(username);
+        review.setCustomerName(customerName);
+        review.setRating(rating);
+        review.setComment(comment);
+        review.setImages(images);
+        
+        return fieldReviewRepository.save(review);
+    }
+    
+    // Cập nhật đánh giá
+    public ProductReview updateReview(Integer reviewId, Map<String, Object> reviewData) {
+        Optional<ProductReview> optionalReview = fieldReviewRepository.findById(reviewId);
+        if (!optionalReview.isPresent()) {
+            throw new RuntimeException("Không tìm thấy đánh giá!");
+        }
+        
+        ProductReview review = optionalReview.get();
+        
+        if (reviewData.containsKey("rating")) {
+            review.setRating((Integer) reviewData.get("rating"));
+        }
+        if (reviewData.containsKey("comment")) {
+            review.setComment((String) reviewData.get("comment"));
+        }
+        if (reviewData.containsKey("images")) {
+            review.setImages((String) reviewData.get("images"));
+        }
+        
+        return fieldReviewRepository.save(review);
+    }
+    
+    // Xóa đánh giá (soft delete)
+    public void deleteReview(Integer reviewId) {
+        Optional<ProductReview> optionalReview = fieldReviewRepository.findById(reviewId);
+        if (!optionalReview.isPresent()) {
+            throw new RuntimeException("Không tìm thấy đánh giá!");
+        }
+        
+        ProductReview review = optionalReview.get();
+        review.setStatus(ProductReview.ReviewStatus.deleted);
+        fieldReviewRepository.save(review);
+    }
+    
+    // Lấy thống kê đánh giá
+    public Map<String, Object> getReviewStats(Integer fieldId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Điểm trung bình
+        Double avgRating = fieldReviewRepository.getAverageRatingByFieldId(fieldId);
+        stats.put("averageRating", avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0);
+        
+        // Tổng số đánh giá
+        Long totalReviews = fieldReviewRepository.getTotalReviewsByFieldId(fieldId);
+        stats.put("totalReviews", totalReviews != null ? totalReviews : 0L);
+        
+        // Thống kê theo rating
+        List<Object[]> ratingStats = fieldReviewRepository.getRatingStatsByFieldId(fieldId);
+        Map<Integer, Long> ratingDistribution = new HashMap<>();
+        
+        // Khởi tạo với 0 cho tất cả rating
+        for (int i = 1; i <= 5; i++) {
+            ratingDistribution.put(i, 0L);
+        }
+        
+        // Cập nhật số liệu thực tế
+        for (Object[] stat : ratingStats) {
+            Integer rating = (Integer) stat[0];
+            Long count = (Long) stat[1];
+            ratingDistribution.put(rating, count);
+        }
+        
+        stats.put("ratingDistribution", ratingDistribution);
+        
+        // Thêm thống kê cho bộ lọc
+        Long reviewsWithComments = fieldReviewRepository.countByFieldIdWithComments(fieldId);
+        Long reviewsWithImages = fieldReviewRepository.countByFieldIdWithImages(fieldId);
+        
+        stats.put("reviewsWithComments", reviewsWithComments != null ? reviewsWithComments : 0L);
+        stats.put("reviewsWithImages", reviewsWithImages != null ? reviewsWithImages : 0L);
+        
+        return stats;
+    }
+    
+    // Lấy đánh giá có lọc
+    public List<ProductReview> getFilteredReviews(Integer fieldId, String filterType, Integer rating) {
+        switch (filterType) {
+            case "rating":
+                if (rating != null) {
+                    return fieldReviewRepository.findByFieldIdAndRatingAndStatusActive(fieldId, rating);
+                }
+                break;
+            case "comments":
+                return fieldReviewRepository.findByFieldIdWithCommentsAndStatusActive(fieldId);
+            case "images":
+                return fieldReviewRepository.findByFieldIdWithImagesAndStatusActive(fieldId);
+            case "all":
+            default:
+                return fieldReviewRepository.findByFieldIdAndStatusActive(fieldId);
+        }
+        return fieldReviewRepository.findByFieldIdAndStatusActive(fieldId);
+    }
+    
+    // Kiểm tra user đã đánh giá chưa
+    public boolean hasUserReviewed(Integer fieldId, String username) {
+        Long count = fieldReviewRepository.countByFieldIdAndUsername(fieldId, username);
+        return count > 0;
+    }
+    
+    // Lấy đánh giá cụ thể của user cho sân
+    public ProductReview getUserReviewForField(Integer fieldId, String username) {
+        List<ProductReview> reviews = fieldReviewRepository.findByFieldIdAndUsernameAndStatusActive(fieldId, username);
+        return reviews.isEmpty() ? null : reviews.get(0);
+    }
+    
+    // Xóa đánh giá của user cho sân cụ thể
+    public boolean deleteUserReviewForField(Integer fieldId, String username) {
+        List<ProductReview> reviews = fieldReviewRepository.findByFieldIdAndUsernameAndStatusActive(fieldId, username);
+        
+        if (!reviews.isEmpty()) {
+            ProductReview review = reviews.get(0);
+            review.setStatus(ProductReview.ReviewStatus.deleted);
+            fieldReviewRepository.save(review);
+            
+            System.out.println("✅ Đã xóa đánh giá ID: " + review.getReviewId() + 
+                            " của user: " + username + " cho sân: " + fieldId);
+            return true;
+        }
+        
+        System.out.println("⚠️ Không tìm thấy đánh giá để xóa cho user: " + username + ", sân: " + fieldId);
+        return false;
+    }
+    
+    // Tạo phản hồi của người bán
+    public ProductReview createSellerReply(Integer reviewId, String status, String adminName, String content) {
+        Optional<ProductReview> optionalReview = fieldReviewRepository.findById(reviewId);
+        if (!optionalReview.isPresent()) {
+            throw new RuntimeException("Không tìm thấy đánh giá với ID: " + reviewId);
+        }
+        
+        ProductReview review = optionalReview.get();
+        
+        // Kiểm tra xem đã có reply chưa
+        String existingContent = review.getSellerReplyContent();
+        if (existingContent != null && !existingContent.isEmpty() && 
+            !"null".equals(existingContent) && !existingContent.trim().isEmpty() &&
+            !"null".equals(existingContent.trim())) {
+            throw new RuntimeException("Đánh giá này đã có phản hồi từ người bán");
+        }
+        
+        // Thêm seller reply
+         // Thêm seller reply
+        review.setSellerReplyContent(content);
+        review.setStatus(status != null ? ProductReview.ReviewStatus.valueOf(status) : review.getStatus());
+        review.setSellerReplyDate(java.time.LocalDateTime.now());
+        review.setUpdatedAt(java.time.LocalDateTime.now());
+        review.setSellerReplyDate(java.time.LocalDateTime.now());
+        
+        ProductReview savedReview = fieldReviewRepository.save(review);
+        return savedReview;
+    }
+
+    public List<ProductReview> findByFieldAndRating(Integer fieldId, Integer rating) {
+        return fieldReviewRepository.findByFieldIdAndRatingAndStatusActive(fieldId, rating);
+    }
+
+    // Get reviews for owner's fields
+    public List<ProductReview> getReviewsByOwner(String ownerUsername) {
+        try {
+            // Get all fields owned by this owner
+            List<Field> ownerFields = fieldDAO.findByOwnerUsername(ownerUsername);
+            
+            // Extract field IDs
+            List<Integer> fieldIds = ownerFields.stream()
+                    .map(Field::getFieldid)
+                    .toList();
+            
+            // Get all reviews for these fields
+            List<ProductReview> reviews = new java.util.ArrayList<>();
+            for (Integer fieldId : fieldIds) {
+                reviews.addAll(fieldReviewRepository.findByFieldIdAndStatusActive(fieldId));
+            }
+            
+            System.out.println("✅ Found " + reviews.size() + " reviews for owner " + ownerUsername + 
+                    " with " + fieldIds.size() + " fields");
+            return reviews;
+        } catch (Exception e) {
+            System.out.println("❌ Error getting reviews by owner: " + e.getMessage());
+            e.printStackTrace();
+            return new java.util.ArrayList<>();
+        }
+    }
+}
