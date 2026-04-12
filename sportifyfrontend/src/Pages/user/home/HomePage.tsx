@@ -250,19 +250,25 @@ export default function HomePage() {
             <div className="col-lg-2 col-md-4">
               <div className="sort w-100 text-center ftco-animate">
                 <div className="img" style={{ backgroundImage: "url(/user/images/vot.png)" }}></div>
-                <h5>Vợt Tennis</h5>
+                <h5>Tennis</h5>
               </div>
             </div>
             <div className="col-lg-2 col-md-4">
               <div className="sort w-100 text-center ftco-animate">
                 <div className="img" style={{ backgroundImage: "url(/user/images/bong.png)" }}></div>
-                <h5>Bóng Đá</h5>
+                <h5>Football</h5>
               </div>
             </div>
             <div className="col-lg-2 col-md-4">
               <div className="sort w-100 text-center ftco-animate">
                 <div className="img" style={{ backgroundImage: "url(/user/images/caulong.png)" }}></div>
-                <h5>Vợt Cầu Lông</h5>
+                <h5>Badminton</h5>
+              </div>
+            </div>
+            <div className="col-lg-2 col-md-4">
+              <div className="sort w-100 text-center ftco-animate">
+                <div className="img" style={{ backgroundImage: "url(/user/images/bongro.png)" }}></div>
+                <h5>Baseketball</h5>
               </div>
             </div>
             <div className="col-lg-2 col-md-4">
@@ -277,12 +283,7 @@ export default function HomePage() {
                 <h5>Giày Thể Thao</h5>
               </div>
             </div>
-            <div className="col-lg-2 col-md-4">
-              <div className="sort w-100 text-center ftco-animate">
-                <div className="img" style={{ backgroundImage: "url(/user/images/bongro.png)" }}></div>
-                <h5>Bóng Rổ</h5>
-              </div>
-            </div>
+            
           </div>
         </div>
       </section>
@@ -320,7 +321,7 @@ export default function HomePage() {
                       <span className="text-dark font-weight">{f.address}</span>
                     </p>
                     <a href={`/sportify/field/detail/${f.id}`} className="btn-custom">
-                      Chi tiết <span className="fa fa-long-arrow-right"></span>
+                      Detail <span className="fa fa-long-arrow-right"></span>
                     </a>
                   </div>
                 </div>
@@ -363,10 +364,12 @@ export default function HomePage() {
                     </p>
                     <p>
                       <span className="text-success font-weight-bold">Mô tả</span>:{" "}
-                      <span className="text-dark font-weight limited-length">{p.description}</span>
+                      <span className="text-dark font-weight d-inline-block text-truncate w-100">
+                        {p.description}
+                      </span>
                     </p>
                     <a href={`/sportify/product-single/${p.id}`} className="btn-custom">
-                      Chi tiết <span className="fa fa-long-arrow-right"></span>
+                      Detail <span className="fa fa-long-arrow-right"></span>
                     </a>
                     <p style={{ color: "#252B48", fontWeight: "bold", width: "50%", paddingLeft: "4px", marginTop: "30px", borderRadius: "10px" }}>
                       <span>Lượt mua:</span>
@@ -454,7 +457,7 @@ export default function HomePage() {
                     <h3 className="heading mb-3">{e.nameevent}</h3>
                     <p className="limited-length">{e.descriptions}</p>
                     <a href={`/sportify/eventdetail/${e.eventid}`} className="btn-custom">
-                      Chi tiết <span className="fa fa-long-arrow-right"></span>
+                      Detail <span className="fa fa-long-arrow-right"></span>
                     </a>
                   </div>
                 </div>

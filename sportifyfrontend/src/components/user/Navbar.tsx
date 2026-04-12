@@ -37,13 +37,13 @@ export default function Navbar() {
                 </div>
               </li>
               <li className="nav-item">
-                <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/product">Cửa hàng</NavLink>
+                <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/product">Shop</NavLink>
               </li>
               <li className="nav-item">
                 <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/event">Tin Tức</NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/contact">Liên hệ</NavLink>
+                <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/contact">Liên lạc</NavLink>
               </li>
             </ul>
           </div>

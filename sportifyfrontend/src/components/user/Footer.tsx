@@ -35,7 +35,7 @@ export default function Footer() {
                 <h2 className="ftco-heading-2">Chính sách và điều kiện</h2>
                 <ul className="list-unstyled">
                   <li>
-                    <Link to="/sportify/policy" className="d-flex align-items-center">
+                     <Link to="/sportify/policy" className="d-flex align-items-center">
                       <span className="fa fa-chevron-right mr-2"></span><span>Quy định chung</span>
                     </Link>
                   </li>
@@ -49,11 +49,11 @@ export default function Footer() {
             </div>
             <div className="col-sm-12 col-md">
               <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2">Liên hệ </h2>
+                 <h2 className="ftco-heading-2">Liên hệ với chúng tôi </h2>
                 <ul className="list-unstyled">
                   <li>
                     <a href="/sportify/contact">
-                      <span className="fa fa-chevron-right mr-2"></span>Liên hệ với chúng tôi
+                       <span className="fa fa-chevron-right mr-2"></span>Liên hệ 
                     </a>
                   </li>
                 </ul>
@@ -61,7 +61,7 @@ export default function Footer() {
             </div>
             <div className="col-sm-12 col-md">
               <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2">Thông tin liên hệ</h2>
+                <h2 className="ftco-heading-2">Thông tin </h2>
                 <div className="block-23 mb-3">
                   <ul>
                     <li>
@@ -96,7 +96,7 @@ export default function Footer() {
                   Bản quyền &copy; {new Date().getFullYear()} Bảo lưu mọi quyền | Mẫu này được thực hiện{" "}
                   <i className="fa fa-heart color-danger" aria-hidden="true"></i> bởi{" "}
                   <a href="/sportify/about" target="_blank">
-                    Đặng Đình Kiên 
+                    Đặng Đình Kiên
                   </a>
                 </p>
               </div>

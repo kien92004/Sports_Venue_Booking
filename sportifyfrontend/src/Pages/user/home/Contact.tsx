@@ -82,7 +82,7 @@ const Contact: React.FC = () => {
 
   return (
     <>
-      <Nav_contact title="Liên Hệ - Góp Ý" />
+      <Nav_contact title=" Phản hồi " />
 
       <section className="ftco-section" style={{ backgroundImage: `url('/user/images/bgAll.png')`, backgroundRepeat: 'repeat', backgroundSize: '100% 100%' }}>
         <div className="container">
@@ -92,7 +92,7 @@ const Contact: React.FC = () => {
                 <div className="row no-gutters">
                   <div className="col-md-7">
                     <div className="contact-wrap w-100 p-md-5 p-4">
-                      <h3 className="mb-4" style={{ color: '#2E7D32', textAlign: 'center' }}>Liện Hệ - Góp Ý</h3>
+                      <h3 className="mb-4" style={{ color: '#2E7D32', textAlign: 'center' }}>Liên lạc - Đóng góp</h3>
                       <form onSubmit={handleSubmit} id="contactForm" name="contactForm" className="contactForm">
                         <div className="row">
                           <div className="col-md-12">
@@ -111,9 +111,9 @@ const Contact: React.FC = () => {
                                 onChange={(e) => setContactType(e.target.value)}
                               >
                                 <option value="Giao diện">Giao diện</option>
-                                <option value="Chức năng">Chức năng</option>
-                                <option value="Hiệu suất">Hiệu suất</option>
-                                <option value="Liên hệ quảng cáo">Liên hệ quảng cáo</option>
+                                <option value="Chức năng">Tính năng</option>
+                                <option value="Hiệu suất">Hiệu quả</option>
+                                <option value="Liên hệ quảng cáo">Quảng cáo</option>
                                 <option value="Khác">Khác</option>
                               </select>
                             </div>
@@ -192,7 +192,7 @@ const Contact: React.FC = () => {
                   <div className="col-md-5 order-md-first d-flex align-items-stretch" style={{ border: '3px solid #2E7D32' }}>
                     <iframe
                       title="location"
-                      src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d2208.388551336548!2d105.74070047117719!3d21.0537224866712!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDAzJzEzLjQiTiAxMDXCsDQ0JzI5LjMiRQ!5e1!3m2!1svi!2s!4v1774518880927!5m2!1svi!2s"
+                       src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d2208.388551336548!2d105.74070047117719!3d21.0537224866712!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjHCsDAzJzEzLjQiTiAxMDXCsDQ0JzI5LjMiRQ!5e1!3m2!1svi!2s!4v1774518880927!5m2!1svi!2s"
                       style={{ border: 0, width: '100%', minHeight: '420px', flexGrow: 1 }}
                       allowFullScreen={true}
                       loading="lazy"
@@ -211,7 +211,7 @@ const Contact: React.FC = () => {
                     </div>
                     <div className="text">
                       <p>
-                        <span>Address: </span>13 ngõ 112/1 Nguyên Xá, Tây Tựu, Hà Nội, Việt Nam
+                         <span>Address: </span>13 ngõ 112/1 Nguyên Xá, Tây Tựu, Hà Nội, Việt Nam
                       </p>
                     </div>
                   </div>
