@@ -55,9 +55,9 @@ const NearestFieldFinder = ({ className, categorySelect = 'tatca' }: NearestFiel
   };
 
   const useDefaultLocation = () => {
-    console.log('Sử dụng tọa độ mặc định TP.HCM');
-    const defaultLat = 10.7769;
-    const defaultLng = 106.7;
+    console.log('Sử dụng tọa độ mặc định Hà Nội');
+    const defaultLat = 21.0285;
+    const defaultLng = 105.8542;
     navigate(`/sportify/field?latitude=${defaultLat}&longitude=${defaultLng}&categorySelect=${categorySelect}`);
     setLoading(false);
   };

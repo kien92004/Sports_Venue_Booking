@@ -81,6 +81,64 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<string[]>([]);
+  const [selectedFields, setSelectedFields] = useState<number[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedFields(fields.map(f => f.fieldid));
+    } else {
+      setSelectedFields([]);
+    }
+  };
+
+  const handleSelectOne = (e: React.ChangeEvent<HTMLInputElement>, id: number) => {
+    if (e.target.checked) {
+      setSelectedFields(prev => [...prev, id]);
+    } else {
+      setSelectedFields(prev => prev.filter(fid => fid !== id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedFields.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 sân để xóa!");
+      return;
+    }
+    if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedFields.length} sân đã chọn không?`)) {
+      axios.delete(`${URL_BACKEND}/rest/fields/delete-multiple`, { data: selectedFields })
+        .then(res => {
+          alert(res.data.message || "Xóa thành công");
+          setFields(prev => prev.filter(f => !selectedFields.includes(f.fieldid)));
+          setSelectedFields([]);
+        })
+        .catch(err => {
+          alert("Lỗi khi xóa: " + err.message);
+        });
+    }
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    axios.post(`${URL_BACKEND}/rest/fields/import`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+      .then(res => {
+        alert(res.data.message || "Import thành công");
+        handleRefresh();
+      })
+      .catch(err => {
+        alert("Lỗi khi import: " + (err.response?.data || err.message));
+      })
+      .finally(() => {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      });
+  };
 
   useEffect(() => {
     return () => {
@@ -249,8 +307,22 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
   // Add field handler
   const handleAddField = async () => {
     try {
+      // Tự động lấy tọa độ nếu đang trống
+      let finalLat = form.latitude;
+      let finalLng = form.longitude;
+      
+      if (!finalLat || !finalLng) {
+        if (form.address && form.address.trim() !== '') {
+          const coords = await geocodeAddress(form.address);
+          if (coords) {
+            finalLat = coords.latitude;
+            finalLng = coords.longitude;
+          }
+        }
+      }
+
       const formData = new FormData();
-      // Thêm từng trường  vào formData
+      // Thêm từng trường vào formData
       Object.entries(form).forEach(([key, value]) => {
         if ((key === "fieldid" || key === "userid") && value === undefined) return;
 
@@ -260,6 +332,9 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
         if (key === "address" && (!value || (typeof value === "string" && value.trim() === ""))) {
           return;
         }
+        // Ghi đè latitude/longitude nếu vừa lấy tự động
+        if (key === "latitude" && finalLat) return;
+        if (key === "longitude" && finalLng) return;
 
         if (value !== undefined && value !== null) {
           if (typeof value === "boolean") {
@@ -269,6 +344,9 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
           }
         }
       });
+      
+      if (finalLat) formData.append("latitude", finalLat);
+      if (finalLng) formData.append("longitude", finalLng);
 
       // Thêm availableShifts
       formData.append("availableShifts", JSON.stringify(selectedShifts.map(id => parseInt(id))));
@@ -418,6 +496,7 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
   const handleSetIP = async () => {
     const address = form.address;
     if (!address || address.trim() === '') {
+      alert("Vui lòng nhập địa chỉ sân trước khi lấy tọa độ!");
       return;
     }
 
@@ -428,6 +507,9 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
         latitude: coords.latitude,
         longitude: coords.longitude
       }));
+      alert(`Đã lấy tọa độ thành công!\nVĩ độ: ${coords.latitude}\nKinh độ: ${coords.longitude}`);
+    } else {
+      alert("Không thể tìm thấy tọa độ cho địa chỉ này. Vui lòng nhập chi tiết hơn (vd: có thêm tên Quận, Thành phố) hoặc tự điền tọa độ thủ công.");
     }
   };
 
@@ -449,6 +531,19 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
             </nav>
           </div>
           <div className="col-auto">
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              accept=".xlsx, .xls"
+              onChange={handleImportExcel}
+            />
+            <button className="btn btn-success me-2" onClick={() => fileInputRef.current?.click()}>
+              <i className="fa fa-file-excel-o"></i> Import Excel
+            </button>
+            <button className="btn btn-danger me-2" onClick={handleBulkDelete} disabled={selectedFields.length === 0}>
+              <i className="fa fa-trash"></i> Xóa {selectedFields.length > 0 ? `(${selectedFields.length})` : ""}
+            </button>
             <button className="btn btn-primary" onClick={async () => {
               resetImageState();
               setShowAdd(true);
@@ -510,6 +605,13 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
               <table className="table table-bordered table-hover align-middle">
                 <thead className="table-light">
                   <tr>
+                    <th>
+                      <input 
+                        type="checkbox" 
+                        onChange={handleSelectAll} 
+                        checked={fields.length > 0 && selectedFields.length === fields.length}
+                      />
+                    </th>
                     <th>#</th>
                     <th>Mã môn thể thao</th>
                     <th>Tên sân</th>
@@ -523,6 +625,13 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
                 <tbody>
                   {fields.map((item, idx) => (
                     <tr key={item.fieldid}>
+                      <td>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedFields.includes(item.fieldid)}
+                          onChange={(e) => handleSelectOne(e, item.fieldid)}
+                        />
+                      </td>
                       <td>{idx + 1}</td>
                       <td>{item.sporttypeid || item.sporttype?.sporttypeid || ""}</td>
                       <td>{item.namefield}</td>
@@ -653,7 +762,7 @@ const FieldPage: React.FC<FieldPageProps> = ({ context = "admin" }) => {
                       onChange={e => handleFormChange("address", e.target.value)}
                     />
                     <button className="btn btn-outline-primary" type="button" onClick={handleSetIP}>
-                      Set IP
+                      Lấy Tọa Độ
                     </button>
                   </div>
                   {errors.filter(e => e.field === "address").map((e, i) => (

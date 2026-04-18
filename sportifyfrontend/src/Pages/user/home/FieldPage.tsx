@@ -48,7 +48,16 @@ export default function FieldPage() {
   const [searchOwner, setSearchOwner] = useState<string>("");
   const [searchAddress, setSearchAddress] = useState<string>("");
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCategory = e.target.value;
+    setSelectedCategory(newCategory);
+    
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('categorySelect', newCategory);
+    setSearchParams(newParams);
+  };
 
   useEffect(() => {
     const latitude = searchParams.get('latitude');
@@ -61,9 +70,9 @@ export default function FieldPage() {
       let validLongitude = Math.abs(parseFloat(longitude || "0"));
 
       if (validLatitude < 8 || validLatitude > 23 || validLongitude < 102 || validLongitude > 109) {
-        console.log('Tọa độ nằm ngoài Việt Nam, sử dụng tọa độ mặc định TP.HCM');
-        validLatitude = 10.7769;
-        validLongitude = 106.7;
+        console.log('Tọa độ nằm ngoài Việt Nam, sử dụng tọa độ mặc định Hà Nội');
+        validLatitude = 21.0285;
+        validLongitude = 105.8542;
       }
 
       console.log('Đang gọi API với tọa độ đã kiểm tra:', validLatitude, validLongitude);
@@ -212,7 +221,7 @@ export default function FieldPage() {
               <select
                 className="form-select shadow-sm"
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={handleCategoryChange}
               >
                 {hasCategories ? (
                   cates.map((c) => (

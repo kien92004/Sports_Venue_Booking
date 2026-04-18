@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -62,6 +65,44 @@ public class GeminiServiceImpl implements AIService {
             List<Products> products = productService.findAll();
             List<Field> fields = fieldService.findAll();
             List<Eventweb> events = eventService.findAll();
+
+            // RAG: Trích xuất ý định tìm kiếm sân bằng Java thay vì gọi API để tránh lỗi Rate Limit (429)
+            String lowerMessage = message.toLowerCase();
+            List<Field> filteredFields = fields.stream()
+                    .filter(f -> {
+                        String addr = f.getAddress() != null ? f.getAddress().toLowerCase() : "";
+                        String name = f.getNamefield() != null ? f.getNamefield().toLowerCase() : "";
+                        
+                        // Nếu câu hỏi chứa tên sân
+                        if (!name.isEmpty() && lowerMessage.contains(name)) return true;
+                        
+                        // Nếu câu hỏi chứa từ khóa địa chỉ của sân (như "cầu giấy", "quận 1")
+                        // Tách địa chỉ thành các phần (ví dụ: "123 Lê Lợi, Cầu Giấy, Hà Nội")
+                        String[] addrParts = addr.split(",");
+                        for (String part : addrParts) {
+                            part = part.trim();
+                            // Chỉ xét các từ khóa địa danh có độ dài > 3 để tránh nhiễu
+                            if (!part.isEmpty() && part.length() > 3 && lowerMessage.contains(part)) {
+                                return true;
+                            }
+                        }
+                        
+                        // Mở rộng tìm kiếm: kiểm tra trực tiếp nếu địa chỉ chứa từ khóa trong câu hỏi
+                        // Ví dụ user nói "hồ chí minh", địa chỉ là "15 Lê Lợi, Hồ Chí Minh"
+                        if (lowerMessage.contains("hồ chí minh") && addr.contains("hồ chí minh")) return true;
+                        if (lowerMessage.contains("hà nội") && addr.contains("hà nội")) return true;
+                        if (lowerMessage.contains("cầu giấy") && addr.contains("cầu giấy")) return true;
+                        
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+
+            if (!filteredFields.isEmpty()) {
+                System.out.println("🔍 Đã lọc được " + filteredFields.size() + " sân khớp với yêu cầu.");
+                fields = filteredFields;
+            } else {
+                System.out.println("⚠️ Không tìm thấy sân nào khớp địa điểm, sử dụng danh sách mặc định.");
+            }
 
             // Xây dựng context HTML cho tất cả
             String productHTML = buildProductHTML(products);
@@ -264,7 +305,7 @@ public class GeminiServiceImpl implements AIService {
                         "HƯỚNG DẪN TRẢ LỜI:\n" +
                         "1. Hãy trả lời một cách tự nhiên, thân thiện, chuyên nghiệp\n" +
                         "2. Nếu câu hỏi về sản phẩm → gợi ý sản phẩm phù hợp với link xem chi tiết\n" +
-                        "3. Nếu câu hỏi về sân → gợi ý sân phù hợp, giá cả, location\n" +
+                        "3. Nếu câu hỏi về sân → CHỈ gợi ý các sân được cung cấp trong DANH SÁCH SÂN CHO THUÊ bên trên (nếu có sân phù hợp), không tự bịa ra sân mới.\n" +
                         "4. Nếu câu hỏi về đội/sự kiện → cung cấp thông tin chi tiết\n" +
                         "5. Nếu câu hỏi về liên hệ/hỗ trợ → cung cấp thông tin liên lạc\n" +
                         "6. Nếu câu hỏi không liên quan → hãy trả lời một cách tự nhiên, thân thiện\n" +

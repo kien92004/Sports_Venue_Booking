@@ -667,8 +667,8 @@ public class FieldController {
 		// Kiểm tra và đảm bảo tọa độ hợp lệ cho Việt Nam
 		if (latitude < 8 || latitude > 23 || longitude < 102 || longitude > 109) {
 			System.out.println("CẢNH BÁO: Tọa độ không nằm trong Việt Nam. Đang điều chỉnh...");
-			latitude = 10.7769; // Tọa độ mặc định TP.HCM
-			longitude = 106.7;
+			latitude = 21.0285; // Tọa độ mặc định Hà Nội
+			longitude = 105.8542;
 		}
 
 		System.out.println("Đang tìm sân gần nhất với tọa độ: " + latitude + ", " + longitude +

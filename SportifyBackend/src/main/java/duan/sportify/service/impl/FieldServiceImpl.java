@@ -143,10 +143,10 @@ public class FieldServiceImpl implements FieldService {
         // Đảm bảo tọa độ hợp lệ trước khi tìm kiếm
         if (userLat < 8 || userLat > 23 || userLng < 102 || userLng > 109) {
             System.out.println("CẢNH BÁO: Tọa độ nằm ngoài khu vực Việt Nam: " + userLat + ", " + userLng);
-            System.out.println("Đang điều chỉnh tọa độ về khu vực TP.HCM...");
-            // Nếu tọa độ không nằm trong vùng Việt Nam, sử dụng tọa độ trung tâm TP.HCM
-            userLat = 10.7769;
-            userLng = 106.7;
+            System.out.println("Đang điều chỉnh tọa độ về khu vực Hà Nội...");
+            // Nếu tọa độ không nằm trong vùng Việt Nam, sử dụng tọa độ trung tâm Hà Nội
+            userLat = 21.0285;
+            userLng = 105.8542;
         }
 
         double effectiveMaxDistance = (maxDistanceKm != null && maxDistanceKm > 0) ? maxDistanceKm : 50.0;

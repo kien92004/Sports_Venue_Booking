@@ -1,9 +1,18 @@
 package duan.sportify.rest.controller;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -23,6 +32,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -222,6 +232,149 @@ public class FieldRestController {
 		return ResponseEntity.ok(Map.of(
 				"success", true,
 				"message", "Field deleted successfully"));
+	}
+
+	@DeleteMapping("delete-multiple")
+	public ResponseEntity<Map<String, Object>> deleteMultiple(@RequestBody List<Integer> ids) {
+		int count = 0;
+		for (Integer id : ids) {
+			if (fieldDAO.existsById(id)) {
+				fieldDAO.deleteBookingDetailsByFieldId(id);
+				fieldDAO.deleteById(id);
+				count++;
+			}
+		}
+		return ResponseEntity.ok(Map.of(
+				"success", true,
+				"message", "Đã xóa thành công " + count + " sân"));
+	}
+
+	@PostMapping("import")
+	public ResponseEntity<?> importFields(@RequestParam("file") MultipartFile file) {
+		try (InputStream is = file.getInputStream()) {
+			Workbook workbook = WorkbookFactory.create(is);
+			Sheet sheet = workbook.getSheetAt(0);
+			List<Field> fields = new ArrayList<>();
+			DataFormatter formatter = new DataFormatter();
+			
+			// Lấy danh sách các mã môn thể thao hợp lệ để kiểm tra
+			List<String> validSportTypes = entityManager.createQuery("SELECT s.sporttypeid FROM Sporttype s", String.class).getResultList();
+			// Lấy danh sách owner id hợp lệ
+			List<Long> validOwnerIds = entityManager.createQuery("SELECT o.ownerId FROM FieldOwnerRegistration o", Long.class).getResultList();
+
+			// Bỏ qua dòng header (i = 0)
+			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+				Row row = sheet.getRow(i);
+				if (row == null) continue;
+				
+				Field field = new Field();
+				
+				// 1. sporttypeid (cột 1)
+				Cell cellSportType = row.getCell(1);
+				if (cellSportType != null) {
+					String sportTypeId = formatter.formatCellValue(cellSportType).trim().toUpperCase();
+					if (!sportTypeId.isEmpty()) {
+						if (!validSportTypes.contains(sportTypeId)) {
+							return ResponseEntity.status(400).body("Lỗi tại dòng " + (i + 1) + ": Mã môn thể thao '" + sportTypeId + "' không tồn tại trong hệ thống.");
+						}
+						field.setSporttype(entityManager.getReference(Sporttype.class, sportTypeId));
+					} else {
+						return ResponseEntity.status(400).body("Lỗi tại dòng " + (i + 1) + ": Cột Mã môn thể thao không được để trống.");
+					}
+				} else {
+					return ResponseEntity.status(400).body("Lỗi tại dòng " + (i + 1) + ": Cột Mã môn thể thao không được để trống.");
+				}
+				
+				// 2. namefield (cột 2)
+				Cell cellName = row.getCell(2);
+				if (cellName != null) field.setNamefield(formatter.formatCellValue(cellName).trim());
+				
+				// 3. descriptionfield (cột 3)
+				Cell cellDesc = row.getCell(3);
+				if (cellDesc != null) field.setDescriptionfield(formatter.formatCellValue(cellDesc).trim());
+				
+				// 4. price (cột 4)
+				Cell cellPrice = row.getCell(4);
+				if (cellPrice != null) {
+					try {
+						field.setPrice(Double.parseDouble(formatter.formatCellValue(cellPrice).trim()));
+					} catch(Exception ignored) {}
+				}
+				
+				// 5. image (cột 5)
+				Cell cellImage = row.getCell(5);
+				if (cellImage != null) field.setImage(formatter.formatCellValue(cellImage).trim());
+				
+				// 6. address (cột 6)
+				Cell cellAddress = row.getCell(6);
+				if (cellAddress != null) field.setAddress(formatter.formatCellValue(cellAddress).trim());
+				
+				// 7. status (cột 7)
+				Cell cellStatus = row.getCell(7);
+				if (cellStatus != null) {
+					String statusStr = formatter.formatCellValue(cellStatus).trim().toLowerCase();
+					field.setStatus("1".equals(statusStr) || "true".equals(statusStr));
+				} else {
+					field.setStatus(true);
+				}
+				
+				// 8. latitude (cột 8)
+				Cell cellLat = row.getCell(8);
+				if (cellLat != null) {
+					try {
+						field.setLatitude(Double.parseDouble(formatter.formatCellValue(cellLat).trim()));
+					} catch(Exception ignored) {}
+				}
+				
+				// 9. longitude (cột 9)
+				Cell cellLng = row.getCell(9);
+				if (cellLng != null) {
+					try {
+						field.setLongitude(Double.parseDouble(formatter.formatCellValue(cellLng).trim()));
+					} catch(Exception ignored) {}
+				}
+				
+				// 10. owner_id (cột 10)
+				Cell cellOwner = row.getCell(10);
+				if (cellOwner != null) {
+					try {
+						String ownerVal = formatter.formatCellValue(cellOwner).trim();
+						if (!ownerVal.isEmpty()) {
+							long ownerId = (long) Double.parseDouble(ownerVal);
+							if (!validOwnerIds.contains(ownerId)) {
+								return ResponseEntity.status(400).body("Lỗi tại dòng " + (i + 1) + ": Chủ sân ID '" + ownerId + "' không tồn tại.");
+							}
+							field.setOwner(entityManager.getReference(FieldOwnerRegistration.class, ownerId));
+						}
+					} catch(Exception ignored) {}
+				}
+				
+				// 11. available_shifts (cột 11)
+				Cell cellShifts = row.getCell(11);
+				if (cellShifts != null) field.setAvailableShifts(formatter.formatCellValue(cellShifts).trim());
+				
+				// 12. end_date (cột 12)
+				Cell cellEndDate = row.getCell(12);
+				if (cellEndDate != null) field.setEndDate(formatter.formatCellValue(cellEndDate).trim());
+				
+				// 13. start_date (cột 13)
+				Cell cellStartDate = row.getCell(13);
+				if (cellStartDate != null) field.setStartDate(formatter.formatCellValue(cellStartDate).trim());
+				
+				// Đảm bảo không lỗi NotBlank
+				if (field.getNamefield() == null || field.getNamefield().isEmpty()) field.setNamefield("Sân không tên");
+				if (field.getAddress() == null || field.getAddress().isEmpty()) field.setAddress("Chưa có địa chỉ");
+				if (field.getPrice() == null) field.setPrice(0.0);
+				
+				fields.add(field);
+			}
+			
+			fieldDAO.saveAll(fields);
+			return ResponseEntity.ok(Map.of("success", true, "message", "Đã import thành công " + fields.size() + " sân từ file Excel."));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(500).body("Lỗi khi import file: " + e.getMessage());
+		}
 	}
 
 	// search team in admin
