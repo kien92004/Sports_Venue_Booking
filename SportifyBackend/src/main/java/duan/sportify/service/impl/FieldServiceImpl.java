@@ -149,7 +149,7 @@ public class FieldServiceImpl implements FieldService {
             userLng = 105.8542;
         }
 
-        double effectiveMaxDistance = (maxDistanceKm != null && maxDistanceKm > 0) ? maxDistanceKm : 50.0;
+        double effectiveMaxDistance = (maxDistanceKm != null && maxDistanceKm > 0) ? maxDistanceKm : 7.0;
         int effectiveLimit = (limit != null && limit > 0) ? limit : 10;
 
         List<Field> candidates = fieldDAO.findActiveFieldsWithCoordinates(sporttypeId);

@@ -661,7 +661,7 @@ public class FieldController {
 			@RequestParam Double longitude,
 			@RequestParam(required = false, defaultValue = "tatca") String categorySelect,
 			@RequestParam(required = false, defaultValue = "10") Integer limit,
-			@RequestParam(required = false, defaultValue = "50") Integer maxDistance,
+			@RequestParam(required = false, defaultValue = "7") Integer maxDistance,
 			Model model) {
 
 		// Kiểm tra và đảm bảo tọa độ hợp lệ cho Việt Nam

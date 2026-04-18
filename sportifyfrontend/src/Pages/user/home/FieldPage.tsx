@@ -78,7 +78,7 @@ export default function FieldPage() {
       console.log('Đang gọi API với tọa độ đã kiểm tra:', validLatitude, validLongitude);
 
       // Thêm tham số maxDistance để mở rộng phạm vi tìm kiếm
-      fetch(`${BACKEND_URL}/api/sportify/field/nearest?latitude=${validLatitude}&longitude=${validLongitude}&categorySelect=${categoryParam}&limit=50&maxDistance=25`)
+      fetch(`${BACKEND_URL}/api/sportify/field/nearest?latitude=${validLatitude}&longitude=${validLongitude}&categorySelect=${categoryParam}&limit=50&maxDistance=7`)
         .then(response => {
           console.log('Trạng thái phản hồi:', response.status);
           if (!response.ok) {
