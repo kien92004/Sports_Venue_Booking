@@ -152,7 +152,7 @@ const Product: React.FC = () => {
                             <del>{formatPrice(product.price)}</del>
                           </p>
                           <p>
-                            Giá bán: <span className="price">{formatPrice(product.discountprice)}</span>
+                            Giá bán: <span className="price">{formatPrice(product.price - product.discountprice)}</span>
                           </p>
                         </div>
                       </div>
