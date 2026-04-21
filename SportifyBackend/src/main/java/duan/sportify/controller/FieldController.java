@@ -422,7 +422,9 @@ public class FieldController {
 		}
 
 		// ✅ LẤY DANH SÁCH CA TRỐNG TỪ SERVICE
-		List<Shifts> emptyShifts = shiftservice.findShiftDate(fieldId, date);
+		// Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
+		java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
+		List<Shifts> emptyShifts = shiftservice.findShiftDate(fieldId, date, expiryTime);
 
 		// ✅ Nếu ngày chọn là hôm nay → lọc các ca chưa tới giờ
 		LocalDate selectedDate = LocalDate.parse(date);

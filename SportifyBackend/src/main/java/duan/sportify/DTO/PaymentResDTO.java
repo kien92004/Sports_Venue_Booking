@@ -12,9 +12,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentResDTO implements Serializable {
-	private String Status;
-	private String Message;
-	private String URL;
+	private String status;
+	private String message;
+	private String url;
 	private String type;
 
 }

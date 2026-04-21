@@ -52,9 +52,9 @@ public class ShiftServiceImpl implements ShiftService{
 	}
 
 	@Override
-	public List<Shifts> findShiftDate(Integer id, String date) {
+	public List<Shifts> findShiftDate(Integer id, String date, java.util.Date expiryTime) {
 		// TODO Auto-generated method stub
-		return shiftDAO.findShiftDate(id, date);
+		return shiftDAO.findShiftDate(id, date, expiryTime);
 	}
 
 	@Override

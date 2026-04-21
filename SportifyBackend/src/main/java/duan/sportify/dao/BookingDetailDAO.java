@@ -8,8 +8,10 @@ import javax.persistence.LockModeType;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import duan.sportify.entities.Bookingdetails;
 import duan.sportify.entities.PermanentBooking;
@@ -454,13 +456,36 @@ public interface BookingDetailDAO extends JpaRepository<Bookingdetails, Integer>
 	@Query("""
 			    SELECT COUNT(bd) > 0
 			    FROM Bookingdetails bd
+			    JOIN Bookings b ON bd.bookingid = b.bookingid
 			    WHERE bd.fieldid = :fieldId
 			      AND bd.shiftid = :shiftId
 			      AND bd.playdate = :playDate
+			      AND (
+			          b.bookingstatus IN ('Hoàn Thành', 'Đã Cọc', 'Đã Thanh Toán')
+			          OR (b.bookingstatus = 'Chưa Thanh Toán' AND b.bookingdate > :expiryTime)
+			      )
 			""")
-	boolean existsBookingDetail(
+	boolean existsActiveBookingDetail(
 			@Param("fieldId") Integer fieldId,
 			@Param("shiftId") Integer shiftId,
-			@Param("playDate") Date playDate);
+			@Param("playDate") Date playDate,
+			@Param("expiryTime") java.util.Date expiryTime);
+
+	@Modifying
+	@Transactional
+	@Query(value = """
+			    DELETE bd FROM bookingdetails bd
+			    JOIN bookings b ON bd.bookingid = b.bookingid
+			    WHERE bd.fieldid = :fieldId
+			      AND bd.shiftid = :shiftId
+			      AND bd.playdate = :playDate
+			      AND b.bookingstatus = 'Chưa Thanh Toán'
+			      AND b.bookingdate <= :expiryTime
+			""", nativeQuery = true)
+	void deleteExpiredBookingDetails(
+			@Param("fieldId") Integer fieldId,
+			@Param("shiftId") Integer shiftId,
+			@Param("playDate") Date playDate,
+			@Param("expiryTime") java.util.Date expiryTime);
 
 }

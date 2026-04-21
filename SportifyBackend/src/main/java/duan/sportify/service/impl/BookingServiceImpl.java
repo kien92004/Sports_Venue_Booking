@@ -43,7 +43,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public Bookings createBooking(String username, Double bookingprice, String phone,
-            String note, int shiftid, int fieldid,
+            String note, Integer shiftid, Integer fieldid,
             Date playdate, Double priceField) {
 
         Bookings booking = new Bookings();
@@ -348,8 +348,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public boolean existsBookingDetail(Integer fieldId, Integer shiftId, Date playDate) {
-        return bookingDetailDAO.existsBookingDetail(fieldId, shiftId, playDate);
+    public boolean existsActiveBookingDetail(Integer fieldId, Integer shiftId, Date playDate, java.util.Date expiryTime) {
+        return bookingDetailDAO.existsActiveBookingDetail(fieldId, shiftId, playDate, expiryTime);
+    }
+
+    @Override
+    @Transactional
+    public void deleteExpiredBookingDetails(Integer fieldId, Integer shiftId, Date playDate, java.util.Date expiryTime) {
+        bookingDetailDAO.deleteExpiredBookingDetails(fieldId, shiftId, playDate, expiryTime);
     }
 
     @Override

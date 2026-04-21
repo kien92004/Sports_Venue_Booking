@@ -18,6 +18,7 @@ import OrderDetailPage from "../../Pages/user/history/OrderHistoryListDetail";
 import Cart from "../../Pages/user/history/Cart";
 // import CheckoutCart from "../../Pages/user/checkout/CheckoutCart";
 import CheckoutCartItems from "../../Pages/user/checkout/CheckoutCartItems";
+import QRPaymentPage from "../../Pages/user/checkout/QRPaymentPage";
 import FootballPredictionPage from "../../Pages/user/home/FootballPredictionPage";
 import FieldHistoryList from "../../Pages/user/history/FieldHistoryList";
 import FieldHistoryListDetail from "../../Pages/user/history/FieldHistoryListDetail";
@@ -68,6 +69,7 @@ const UserRoutes: React.FC = () => (
     {/* <Route path="order/cart" element={<OrderCart />} />*/}
     <Route path="order/checkout" element={<OrderDetailPage />} /> 
     <Route path="order/historyList" element={<OrderHistoryList />} />
+    <Route path="qr-payment" element={<QRPaymentPage />} />
      <Route path="order/historyList/detail/:id" element={<OrderHistoryListDetail />} />
    
    

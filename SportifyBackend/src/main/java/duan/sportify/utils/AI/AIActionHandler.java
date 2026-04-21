@@ -222,7 +222,9 @@ public class AIActionHandler {
         Field field = optField.get();
 
         // ✅ Lấy toàn bộ ca trống trong ngày
-        List<Shifts> allAvailable = shiftService.findShiftDate(field.getFieldid(), date);
+        // Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
+        java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
+        List<Shifts> allAvailable = shiftService.findShiftDate(field.getFieldid(), date, expiryTime);
         if (allAvailable.isEmpty()) {
             return Map.of("message", "Sân " + fieldName + " không còn ca trống vào ngày " + date);
         }
@@ -332,7 +334,9 @@ public class AIActionHandler {
         int idField = field.getFieldid();
 
         // ✅ Lấy danh sách ca còn trống
-        List<Shifts> shifts = shiftService.findShiftDate(idField, date);
+        // Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
+        java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
+        List<Shifts> shifts = shiftService.findShiftDate(idField, date, expiryTime);
         if (shifts.isEmpty()) {
             return Map.of("message", "Sân " + fieldName + " không còn ca trống vào ngày " + date);
         }

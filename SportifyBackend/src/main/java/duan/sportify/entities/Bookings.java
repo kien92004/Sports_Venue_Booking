@@ -61,6 +61,10 @@ public class Bookings implements Serializable {
     @Column(name = "bookingdate", nullable = false)
     private Date bookingdate;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "paymentdate")
+    private Date paymentdate;
+
     @Column(name = "bookingprice", nullable = false)
     private Double bookingprice;
     @Pattern(regexp = "^(0|\\+84)\\d{9,10}$", message = "{Pattern.bookings.phone}")

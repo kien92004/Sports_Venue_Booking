@@ -14,7 +14,7 @@ public interface BookingService {
 	List<Bookings> findAll();
 
 	Bookings createBooking(String username, Double bookingprice, String phone,
-			String note, int shiftid, int fieldid, Date playdate, Double priceField);
+			String note, Integer shiftid, Integer fieldid, Date playdate, Double priceField);
 
 	Bookings createBookingPermanent(String username, Double bookingprice, String phone,
 			String note, List<ShiftDTO> shifts,
@@ -45,7 +45,9 @@ public interface BookingService {
 
 	int countUserBookingsToday(String username);
 
-	boolean existsBookingDetail(Integer fieldId, Integer shiftId, Date playDate);
+	boolean existsActiveBookingDetail(Integer fieldId, Integer shiftId, Date playDate, java.util.Date expiryTime);
+
+	void deleteExpiredBookingDetails(Integer fieldId, Integer shiftId, Date playDate, java.util.Date expiryTime);
 
 	boolean existsOverlappingPermanentBooking(
 			Integer fieldId,

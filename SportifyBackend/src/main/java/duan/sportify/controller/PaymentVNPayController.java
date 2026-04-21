@@ -176,12 +176,25 @@ public class PaymentVNPayController {
 		String clientIp = getClientIpAddress(request);
 		String username = (String) request.getSession().getAttribute("username");
 
-		Integer voucherOfUserId = Integer.parseInt(
-				body.getVoucherOfUserId() != null ? body.getVoucherOfUserId() : "0");
+		if (username == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+					.body(Map.of("message", "Bạn chưa đăng nhập. Vui lòng đăng nhập để tiếp tục."));
+		}
+
+		String voucherStr = body.getVoucherOfUserId();
+		Integer voucherOfUserId = (voucherStr != null && !voucherStr.isEmpty() && !"undefined".equals(voucherStr) && !"null".equals(voucherStr)) 
+				? Integer.parseInt(voucherStr) : 0;
+
+		if (body.getFieldid() == null || body.getShiftId() == null || body.getPlaydate() == null || body.getAmount() == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body(Map.of("message", "Thiếu thông tin đặt sân (sân, ca, ngày hoặc số tiền)."));
+		}
 
 		// ================================
 		// ✅ 1. CHECK TRÙNG LỊCH
 		// ================================
+		// Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
+		java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
 
 		// 👉 CASE 1: PERMANENT BOOKING
 		if (body.getShifts() != null && !body.getShifts().isEmpty()) {
@@ -209,10 +222,11 @@ public class PaymentVNPayController {
 		// 👉 CASE 2: BOOKING THEO NGÀY (ONCE)
 		else {
 
-			boolean booked = bookingService.existsBookingDetail(
+			boolean booked = bookingService.existsActiveBookingDetail(
 					body.getFieldid(),
 					body.getShiftId(),
-					body.getPlaydate());
+					body.getPlaydate(),
+					expiryTime);
 
 			if (booked) {
 				return ResponseEntity
@@ -225,40 +239,54 @@ public class PaymentVNPayController {
 		}
 
 		// ================================
-		// ✅ 2. KHÔNG TRÙNG → TIẾP TỤC THANH TOÁN
+		// ✅ 3. TẠO BOOKING VÀ TRẢ VỀ LINK QR
 		// ================================
 
-		request.getSession().setAttribute("pendingBookingData", body);
-		request.getSession().setAttribute("pendingUsername", username);
-		request.getSession().setAttribute("bookingFieldId", body.getFieldid());
-		request.getSession().setAttribute("voucherOfUserId", voucherOfUserId);
-
-		if (body.getCardId() == null || body.getCardId().isEmpty()) {
-
-			String paymentUrl = vnPayService.generatePaymentUrl(
-					body.getAmount().toString(),
-					clientIp,
-					voucherOfUserId,
-					username);
-
-			return ResponseEntity.ok(
-					new PaymentResDTO("Ok", "Successfully", paymentUrl, null));
-
-		} else {
-
-			Long cardId = Long.parseLong(body.getCardId());
-			String token = paymentMethodService.getPaymentMethod(cardId).getToken();
-
-			String paymentUrl = vnPayService.generatePaymentUrlByToken(
-					body.getAmount().toString(),
-					clientIp,
+		Bookings createdBooking = null;
+		if (body.getShifts() != null && !body.getShifts().isEmpty()) {
+			createdBooking = bookingService.createBookingPermanent(
 					username,
-					token,
-					voucherOfUserId);
+					body.getAmount(),
+					body.getPhone(),
+					body.getNote(),
+					body.getShifts(),
+					body.getFieldid(),
+					body.getPricefield(),
+					body.getStartDate(),
+					body.getEndDate());
+		} else {
+			// Trước khi tạo booking mới, xóa các đơn "Chưa Thanh Toán" đã hết hạn cho sân/ca này
+			bookingService.deleteExpiredBookingDetails(
+					body.getFieldid(),
+					body.getShiftId(),
+					body.getPlaydate(),
+					expiryTime);
 
-			return ResponseEntity.ok(
-					new PaymentResDTO("Ok", "Successfully", paymentUrl, null));
+			createdBooking = bookingService.createBooking(
+					username,
+					body.getAmount(),
+					body.getPhone(),
+					body.getNote(),
+					body.getShiftId(),
+					body.getFieldid(),
+					body.getPlaydate(),
+					body.getPricefield());
 		}
+
+		if (createdBooking != null) {
+			createdBooking.setBookingstatus("Chưa Thanh Toán");
+			bookingService.update(createdBooking);
+		}
+
+		String orderId = "FIELD_" + createdBooking.getBookingid();
+		String description = "Thanh toan san " + createdBooking.getBookingid();
+		String paymentUrl = buildQrPageUrl(body.getAmount().toString(), orderId, description, voucherOfUserId);
+
+		PaymentResDTO res = new PaymentResDTO();
+		res.setStatus("Ok");
+		res.setMessage("Successfully");
+		res.setUrl(paymentUrl);
+		return ResponseEntity.ok(res);
 	}
 
 	// cart
@@ -276,6 +304,10 @@ public class PaymentVNPayController {
 		System.out.println("voucherOfUserId: " + voucherOfUserId);
 		// Lấy thông tin user
 		String userlogin = (String) request.getSession().getAttribute("username");
+		if (userlogin == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+					.body(new PaymentResDTO("Error", "Bạn chưa đăng nhập.", null, null));
+		}
 		Users user = userservice.findByUsername(userlogin);
 		Date currentDate = new Date();
 
@@ -325,44 +357,52 @@ public class PaymentVNPayController {
 		}
 		System.out.println("Username: " + saveOrder.getUsername());
 
-		// Lấy IP từ request thay vì gọi API bên ngoài
-		String clientIp = getClientIpAddress(request);
-		System.out.println("Client IP: " + clientIp);
-		String paymentUrl;
-		// Chuẩn bị thông tin thanh toán VNPay thông qua VNPayService
-		String cartInfo = "Thanh toán giỏ hàng #" + cartid + " cho user " + userlogin;
-		if (cardId != null && !cardId.isEmpty()) {
-			Long cardIdLong = Long.parseLong(cardId);
-			String token = paymentMethodService.getPaymentMethod(cardIdLong).getToken();
-			System.out
-					.println("Generating cart payment URL by token: " + token + " voucherOfUserId: " + voucherOfUserId);
-			paymentUrl = vnPayService.generateCartPaymentUrlByToken(
-					totalPrice.toString(),
-					clientIp,
-					userlogin,
-					token,
-					voucherOfUserId,
-					cartInfo);
-
-		} else {
-			System.out.println("Generating cart payment URL: " + " voucherOfUserId: " + voucherOfUserId);
-			paymentUrl = vnPayService.generateCartPaymentUrl(
-					totalPrice.toString(),
-					clientIp,
-					voucherOfUserId,
-					userlogin,
-					cartInfo);
-		}
+		String orderId = "CART_" + saveOrder.getOrderid();
+		String cartInfo = "Thanh toan gio hang " + saveOrder.getOrderid();
+		String paymentUrl = buildQrPageUrl(totalPrice.toString(), orderId, cartInfo, voucherOfUserId);
 
 		PaymentResDTO paymentResDTO = new PaymentResDTO();
 		paymentResDTO.setStatus("Ok");
 		paymentResDTO.setMessage("Successfully");
-		paymentResDTO.setURL(paymentUrl);
+		paymentResDTO.setUrl(paymentUrl);
 
 		return ResponseEntity.ok(paymentResDTO);
 	}
 
+	private String buildQrPageUrl(String amount, String orderId, String description, Integer voucherOfUserId) {
+		String frontendUrl = appConfig.getFrontendUrl();
+		return frontendUrl + "/sportify/qr-payment?amount=" + amount 
+				+ "&orderId=" + orderId 
+				+ "&voucher=" + (voucherOfUserId != null ? voucherOfUserId : 0)
+				+ "&desc=" + description.replaceAll(" ", "%20");
+	}
+
 	// Refund
+
+	@GetMapping("api/user/payment/status")
+	public ResponseEntity<?> checkPaymentStatus(@RequestParam("orderId") String orderId) {
+		boolean isPaid = false;
+		if (orderId != null) {
+			if (orderId.startsWith("FIELD_")) {
+				try {
+					Integer bookingId = Integer.parseInt(orderId.substring(6));
+					Bookings booking = bookingService.findByBookingid(bookingId);
+					if (booking != null && "Đã Thanh Toán".equals(booking.getBookingstatus())) {
+						isPaid = true;
+					}
+				} catch (Exception e) {}
+			} else if (orderId.startsWith("CART_")) {
+				try {
+					Integer cartOrderId = Integer.parseInt(orderId.substring(5));
+					Orders order = ordersService.findById(cartOrderId);
+					if (order != null && order.getPaymentstatus() != null && order.getPaymentstatus()) {
+						isPaid = true;
+					}
+				} catch (Exception e) {}
+			}
+		}
+		return ResponseEntity.ok(Collections.singletonMap("isPaid", isPaid));
+	}
 
 	@PostMapping("/api/user/payment/refund")
 	public ResponseEntity<PaymentResDTO> PaymentRefund(@RequestBody PermanentPaymentRequest body,

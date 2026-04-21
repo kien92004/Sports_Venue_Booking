@@ -16,6 +16,7 @@ interface Order {
   note: string;
   orderstatus: string;
   paymentstatus: boolean;
+  paymentdate?: string;
   totalprice: number;
   users?: User;
   // ...other fields
@@ -232,6 +233,7 @@ const OrderProductPage: React.FC = () => {
                     <th>Ngày đặt</th>
                     <th>Địa chỉ giao hàng</th>
                     <th>Trạng thái giao hàng</th>
+                    <th>Thời gian thanh toán</th>
                     <th>Trạng thái thanh toán</th>
                     <th className="text-center no-sort">Action</th>
                   </tr>
@@ -248,6 +250,7 @@ const OrderProductPage: React.FC = () => {
                       <td>{formatDate(item.createdate)}</td>
                       <td>{item.address}</td>
                       <td>{item.orderstatus}</td>
+                      <td>{item.paymentdate ? formatDate(item.paymentdate) : "N/A"}</td>
                       <td>{item.paymentstatus ? "Đã thanh toán" : "Chưa thanh toán"}</td>
                       <td className="text-center">
                         <button

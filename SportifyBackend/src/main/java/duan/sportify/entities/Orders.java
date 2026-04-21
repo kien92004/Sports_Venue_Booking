@@ -83,13 +83,17 @@ public class Orders implements Serializable {
     @Column(name = "createdate", nullable = false)
     private Date createdate;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "paymentdate")
+    private Date paymentdate;
+
     @Column(name = "address", nullable = false, length = 100)
     private String address;
 
     @Column(name = "note", length = 1000)
     private String note;
 
-    @Column(name = "orderstatus", nullable = false, length = 12)
+    @Column(name = "orderstatus", nullable = false, length = 20)
     private String orderstatus;
     @Column(name = "paymentstatus", nullable = false)
     private Boolean paymentstatus;

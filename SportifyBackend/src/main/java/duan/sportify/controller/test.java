@@ -52,11 +52,12 @@ public class test {
         }
         // 👉 CASE 2: BOOKING THEO NGÀY (ONCE)
         else {
-
-            boolean booked = bookingService.existsBookingDetail(
+            java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
+            boolean booked = bookingService.existsActiveBookingDetail(
                     body.getFieldid(),
                     body.getShiftId(),
-                    body.getPlaydate());
+                    body.getPlaydate(),
+                    expiryTime);
 
             if (booked) {
                 return ResponseEntity

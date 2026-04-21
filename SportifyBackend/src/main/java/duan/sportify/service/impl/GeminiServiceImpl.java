@@ -72,7 +72,21 @@ public class GeminiServiceImpl implements AIService {
                     .filter(f -> {
                         String addr = f.getAddress() != null ? f.getAddress().toLowerCase() : "";
                         String name = f.getNamefield() != null ? f.getNamefield().toLowerCase() : "";
-                        
+                        String shifts = f.getAvailableShifts() != null ? f.getAvailableShifts().toLowerCase() : "";
+
+                        // Kiểm tra xem người dùng có nhắc đến giờ không (vd: 6h, 6 giờ, 18h)
+                        boolean timeMatch = true;
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)\\s*(h|giờ)").matcher(lowerMessage);
+                        if (m.find()) {
+                            String timeStr = m.group(1) + "h"; // Chuyển hóa thành dạng "6h" để tìm trong available_shifts
+                            if (!shifts.contains(timeStr)) {
+                                timeMatch = false;
+                            }
+                        }
+
+                        // Nếu người dùng có nhập giờ nhưng sân không trống giờ đó -> loại sân này
+                        if (!timeMatch) return false;
+
                         // Nếu câu hỏi chứa tên sân
                         if (!name.isEmpty() && lowerMessage.contains(name)) return true;
                         
@@ -88,7 +102,6 @@ public class GeminiServiceImpl implements AIService {
                         }
                         
                         // Mở rộng tìm kiếm: kiểm tra trực tiếp nếu địa chỉ chứa từ khóa trong câu hỏi
-                        // Ví dụ user nói "hồ chí minh", địa chỉ là "15 Lê Lợi, Hồ Chí Minh"
                         if (lowerMessage.contains("hồ chí minh") && addr.contains("hồ chí minh")) return true;
                         if (lowerMessage.contains("hà nội") && addr.contains("hà nội")) return true;
                         if (lowerMessage.contains("cầu giấy") && addr.contains("cầu giấy")) return true;
@@ -104,18 +117,25 @@ public class GeminiServiceImpl implements AIService {
                 System.out.println("⚠️ Không tìm thấy sân nào khớp địa điểm, sử dụng danh sách mặc định.");
             }
 
-            // Xây dựng context HTML cho tất cả
-            String productHTML = buildProductHTML(products);
+            // Xây dựng context HTML thông minh, chỉ gửi những dữ liệu liên quan để tiết kiệm token
+            String productHTML = "";
+            if (lowerMessage.contains("sản phẩm") || lowerMessage.contains("áo") || lowerMessage.contains("giày") || lowerMessage.contains("bóng") || lowerMessage.contains("mua")) {
+                productHTML = buildProductHTML(products);
+            }
+            
+            String eventHTML = "";
+            if (lowerMessage.contains("đội") || lowerMessage.contains("sự kiện") || lowerMessage.contains("giải") || lowerMessage.contains("event")) {
+                eventHTML = buildEventHTML(events);
+            }
+
             String fieldHTML = buildFieldHTML(fields);
-            String eventHTML = buildEventHTML(events);
             String contactHTML = "<h3>📞 Thông Tin Liên Hệ</h3><p>📧 Email: support@sportify.com<br>☎️ Hotline: 0123-456-789<br>Hỗ trợ 24/7</p>";
 
             // Xây dựng prompt với tất cả context
             String prompt = buildPrompt(message, productHTML, fieldHTML, eventHTML, contactHTML);
 
             System.out.println("🔵 Gọi Gemini API với câu hỏi: " + message);
-            System.out.println("📦 Dữ liệu: " + products.size() + " sản phẩm, " +
-                    fields.size() + " sân, " + events.size() + " đội");
+            System.out.println("📦 Dữ liệu đã gửi: " + (productHTML.isEmpty() ? 0 : products.size()) + " sản phẩm, " + fields.size() + " sân, " + (eventHTML.isEmpty() ? 0 : events.size()) + " sự kiện");
 
             // Retry logic - thử lại 3 lần nếu lỗi
             int maxRetries = 3;
@@ -246,6 +266,7 @@ public class GeminiServiceImpl implements AIService {
                                     "<div>" +
                                     "<strong>%s</strong> - %s VND/giờ<br>" +
                                     "📍 %s<br>" +
+                                    "⏰ Ca trống: %s<br>" +
                                     "<a href=\"/sportify/field/detail/%s\" style=\"color: #007bff; text-decoration: none; font-size: 12px; cursor: pointer;\" onclick=\"window.location.href='/sportify/field/detail/%s'; return false;\">Xem chi tiết & Đặt sân</a>"
                                     +
                                     "</div>" +
@@ -255,6 +276,7 @@ public class GeminiServiceImpl implements AIService {
                             field.getNamefield(),
                             field.getPrice(),
                             field.getAddress(),
+                            field.getAvailableShifts() != null && !field.getAvailableShifts().isEmpty() ? field.getAvailableShifts() : "Chưa cập nhật",
                             field.getFieldid(),
                             field.getFieldid());
                 })

@@ -42,6 +42,7 @@ interface Booking {
   bookingprice: number;
   phone: string;
   note: string;
+  paymentdate?: string;
   bookingstatus: string;
   refund: boolean; // Add this new property
   users?: User;
@@ -338,6 +339,7 @@ const BookingPage: React.FC = () => {
                     <th>Ngày đặt</th>
                     <th>Thành tiền</th>
                     <th>Số điện thoại</th>
+                    <th>Thời gian thanh toán</th>
                     <th>Trạng thái</th>
                     <th className="text-center">Action</th>
                   </tr>
@@ -362,6 +364,7 @@ const BookingPage: React.FC = () => {
                       </td>
                       <td>{formatCurrency(item.bookingprice)}</td>
                       <td>{item.phone}</td>
+                      <td>{item.paymentdate ? formatDate(item.paymentdate) : "N/A"}</td>
                       <td>{item.bookingstatus}</td>
                       <td className="text-center">
                         <button className="btn btn-outline-primary btn-sm"
