@@ -1,5 +1,7 @@
 package duan.sportify.service.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.core.ParameterizedTypeReference;
 
 import duan.sportify.entities.Eventweb;
 import duan.sportify.entities.Field;
@@ -39,11 +42,14 @@ public class GeminiServiceImpl implements AIService {
     @Value("${backend.url:http://localhost:8081}")
     private String backendUrl;
 
-    @Value("${gemini.api.key:AIzaSyCMzeffGly3YyAHiiBhcdppK8F1Hs-1KmA}")
+    @Value("${gemini.api.key:AIzaSyDv1N1qH1nzD67rfSYzmK0R73097Qx8Js4}")
     private String geminiApiKey;
 
-    @Value("${gemini.api.model:gemini-2.0-flash-exp}")
+    @Value("${gemini.api.model:gemini-1.5-flash}")
     private String geminiModel;
+
+    @Value("${groq.api.key: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}")
+    private String groqApiKey;
 
     @Autowired
     private ProductService productService;
@@ -134,40 +140,16 @@ public class GeminiServiceImpl implements AIService {
             // Xây dựng prompt với tất cả context
             String prompt = buildPrompt(message, productHTML, fieldHTML, eventHTML, contactHTML);
 
-            System.out.println("🔵 Gọi Gemini API với câu hỏi: " + message);
+            System.out.println("🔵 Gọi Groq API với câu hỏi: " + message);
             System.out.println("📦 Dữ liệu đã gửi: " + (productHTML.isEmpty() ? 0 : products.size()) + " sản phẩm, " + fields.size() + " sân, " + (eventHTML.isEmpty() ? 0 : events.size()) + " sự kiện");
 
-            // Retry logic - thử lại 3 lần nếu lỗi
-            int maxRetries = 3;
-            int retryCount = 0;
-            Exception lastException = null;
-
-            while (retryCount < maxRetries) {
-                try {
-                    String response = callGeminiAPI(prompt);
-                    if (response != null) {
-                        System.out.println("✅ Response nhận được từ Gemini");
-                        return response;
-                    }
-                } catch (Exception ex) {
-                    lastException = ex;
-                    retryCount++;
-                    System.out.println("⏳ Lần thử lại " + retryCount + "/" + maxRetries + ": " + ex.getMessage());
-
-                    if (retryCount < maxRetries) {
-                        // Chờ 1 giây trước khi thử lại
-                        Thread.sleep(1000);
-                    }
-                }
+            String response = callGeminiAPI(prompt);
+            if (response != null) {
+                System.out.println("✅ Response nhận được từ Groq: " +   response);
+                return response;
             }
 
-            // Nếu tất cả lần thử đều fail
-            if (lastException != null) {
-                System.out.println("❌ Lỗi sau " + maxRetries + " lần thử: " + lastException.getMessage());
-                return "😅 Xin lỗi, AI Gemini đang quá tải. Vui lòng thử lại sau vài giây!";
-            }
-
-            return "❌ Không nhận được phản hồi từ Gemini";
+            return "❌ Không nhận được phản hồi từ Groq";
         } catch (Exception ex) {
             System.out.println("❌ Exception: " + ex.getClass().getName() + " - " + ex.getMessage());
             ex.printStackTrace();
@@ -178,28 +160,44 @@ public class GeminiServiceImpl implements AIService {
     /**
      * Gọi Gemini API với retry logic
      */
-    private String callGeminiAPI(String prompt) throws Exception {
-        Map<String, Object> payload = Map.of(
-                "contents", List.of(Map.of(
-                        "role", "user",
-                        "parts", List.of(Map.of("text", prompt)))));
-
+    private String  callGeminiAPI(String prompt) throws Exception {
+        String url = "https://api.groq.com/openai/v1/chat/completions";
+        String model = "llama-3.1-8b-instant";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + groqApiKey);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("model", model);
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        Map<String, String> message = new HashMap<>();
+        message.put("role", "user");
+        message.put("content", prompt);
+        messages.add(message);
+
+        payload.put("messages", messages);
 
         RestTemplate restTemplate = new RestTemplate();
-        String url = String.format(
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                geminiModel, geminiApiKey);
-
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Map<String, Object>> res = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) restTemplate
-                .exchange(url, HttpMethod.POST, new HttpEntity<>(payload, headers), Map.class);
+        ResponseEntity<Map<String, Object>> res =
+                restTemplate.exchange(
+                        url,
+                        HttpMethod.POST,
+                        new HttpEntity<>(payload, headers),
+                        new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
 
         System.out.println("📥 Response Status: " + res.getStatusCode());
 
-        String result = extractGeminiText(res.getBody());
-        return result;
+        Map<String, Object> body = res.getBody();
+        List<Map<String, Object>> choices = (List<Map<String, Object>>) body.get("choices");
+        Map<String, Object> firstChoice = choices.get(0);
+        Map<String, Object> messageRes = (Map<String, Object>) firstChoice.get("message");
+
+        String content = (String) messageRes.get("content");
+
+        System.out.println("🤖 AI Response kien : " + content);
+        return content;
     }
 
     /**
