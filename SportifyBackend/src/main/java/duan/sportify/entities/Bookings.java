@@ -75,7 +75,7 @@ public class Bookings implements Serializable {
     @Column(name = "note", length = 200)
     private String note;
 
-    @Column(name = "bookingstatus", nullable = false, length = 16)
+    @Column(name = "bookingstatus", nullable = false, length = 50)
     private String bookingstatus;
 
     @Column(name = "refund", nullable = false)

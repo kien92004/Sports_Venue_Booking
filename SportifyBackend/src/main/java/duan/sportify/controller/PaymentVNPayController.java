@@ -173,120 +173,131 @@ public class PaymentVNPayController {
 			@RequestBody PermanentPaymentRequest body,
 			HttpServletRequest request) throws Exception {
 
-		String clientIp = getClientIpAddress(request);
-		String username = (String) request.getSession().getAttribute("username");
+		try {
+			String clientIp = getClientIpAddress(request);
+			String username = (String) request.getSession().getAttribute("username");
 
-		if (username == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-					.body(Map.of("message", "Bạn chưa đăng nhập. Vui lòng đăng nhập để tiếp tục."));
-		}
+			if (username == null) {
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+						.body(Map.of("message", "Bạn chưa đăng nhập. Vui lòng đăng nhập để tiếp tục."));
+			}
 
-		String voucherStr = body.getVoucherOfUserId();
-		Integer voucherOfUserId = (voucherStr != null && !voucherStr.isEmpty() && !"undefined".equals(voucherStr) && !"null".equals(voucherStr)) 
-				? Integer.parseInt(voucherStr) : 0;
+			String voucherStr = body.getVoucherOfUserId();
+			Integer voucherOfUserId = (voucherStr != null && !voucherStr.isEmpty() && !"undefined".equals(voucherStr) && !"null".equals(voucherStr)) 
+					? Integer.parseInt(voucherStr) : 0;
 
-		if (body.getFieldid() == null || body.getShiftId() == null || body.getPlaydate() == null || body.getAmount() == null) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-					.body(Map.of("message", "Thiếu thông tin đặt sân (sân, ca, ngày hoặc số tiền)."));
-		}
+			if (body.getFieldid() == null || body.getShiftId() == null || body.getPlaydate() == null || body.getAmount() == null) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body(Map.of("message", "Thiếu thông tin đặt sân (sân, ca, ngày hoặc số tiền)."));
+			}
 
-		// ================================
-		// ✅ 1. CHECK TRÙNG LỊCH
-		// ================================
-		// Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
-		java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
+			// ================================
+			// ✅ 1. CHECK TRÙNG LỊCH
+			// ================================
+			// Thời gian hết hạn cho các đơn "Chưa Thanh Toán" (15 phút)
+			java.util.Date expiryTime = new java.util.Date(System.currentTimeMillis() - 15 * 60 * 1000);
 
-		// 👉 CASE 1: PERMANENT BOOKING
-		if (body.getShifts() != null && !body.getShifts().isEmpty()) {
+			// 👉 CASE 1: PERMANENT BOOKING
+			if (body.getShifts() != null && !body.getShifts().isEmpty()) {
 
-			for (ShiftDTO shift : body.getShifts()) {
+				for (ShiftDTO shift : body.getShifts()) {
 
-				boolean conflict = bookingService
-						.existsOverlappingPermanentBooking(
-								body.getFieldid(),
-								shift.getShiftId(),
-								shift.getDayOfWeek(),
-								body.getStartDate(),
-								body.getEndDate());
+					boolean conflict = bookingService
+							.existsOverlappingPermanentBooking(
+									body.getFieldid(),
+									shift.getShiftId(),
+									shift.getDayOfWeek(),
+									body.getStartDate(),
+									body.getEndDate());
 
-				if (conflict) {
-					return ResponseEntity
-							.status(HttpStatus.CONFLICT) // 409
-							.body(
-									Map.of(
-											"message",
-											"Sân đã được người khác đặt, vui lòng chọn sân khác hoặc khung giờ khác."));
+					// if (conflict) {
+					// 	return ResponseEntity
+					// 			.status(HttpStatus.CONFLICT) // 409
+					// 			.body(
+					// 					Map.of(
+					// 							"message",
+					// 							"Sân đã được người khác đặt, vui lòng chọn sân khác hoặc khung giờ khác."));
+					// }
 				}
 			}
-		}
-		// 👉 CASE 2: BOOKING THEO NGÀY (ONCE)
-		else {
+			// 👉 CASE 2: BOOKING THEO NGÀY (ONCE)
+			else {
 
-			boolean booked = bookingService.existsActiveBookingDetail(
-					body.getFieldid(),
-					body.getShiftId(),
-					body.getPlaydate(),
-					expiryTime);
+				boolean booked = bookingService.existsActiveBookingDetail(
+						body.getFieldid(),
+						body.getShiftId(),
+						body.getPlaydate(),
+						expiryTime);
 
-			if (booked) {
-				return ResponseEntity
-						.status(HttpStatus.CONFLICT) // 409
-						.body(
-								Map.of(
-										"message",
-										"Sân đã được người khác đặt, vui lòng chọn sân khác hoặc khung giờ khác."));
+				// if (booked) {
+				// 	return ResponseEntity
+				// 			.status(HttpStatus.CONFLICT) // 409
+				// 			.body(
+				// 					Map.of(
+				// 							"message",
+				// 							"Sân đã được người khác đặt, vui lòng chọn sân khác hoặc khung giờ khác."));
+				// }
 			}
+
+			// ================================
+			// ✅ 3. TẠO BOOKING VÀ TRẢ VỀ LINK QR
+			// ================================
+
+			Bookings createdBooking = null;
+			if (body.getShifts() != null && !body.getShifts().isEmpty()) {
+				createdBooking = bookingService.createBookingPermanent(
+						username,
+						body.getAmount(),
+						body.getPhone(),
+						body.getNote(),
+						body.getShifts(),
+						body.getFieldid(),
+						body.getPricefield(),
+						body.getStartDate(),
+						body.getEndDate());
+			} else {
+				// Trước khi tạo booking mới, xóa các đơn "Chưa Thanh Toán" đã hết hạn cho sân/ca này
+				bookingService.deleteExpiredBookingDetails(
+						body.getFieldid(),
+						body.getShiftId(),
+						body.getPlaydate(),
+						expiryTime);
+
+				createdBooking = bookingService.createBooking(
+						username,
+						body.getAmount(),
+						body.getPhone(),
+						body.getNote(),
+						body.getShiftId(),
+						body.getFieldid(),
+						body.getPlaydate(),
+						body.getPricefield());
+			}
+
+			if (createdBooking != null) {
+				createdBooking.setBookingstatus("Chưa Thanh Toán");
+				bookingService.update(createdBooking);
+			}
+
+			String orderId = "FIELD_" + createdBooking.getBookingid();
+			String description = "Thanh toan san " + createdBooking.getBookingid();
+			String paymentUrl = buildQrPageUrl(body.getAmount().toString(), orderId, description, voucherOfUserId);
+
+			PaymentResDTO res = new PaymentResDTO();
+			res.setStatus("Ok");
+			res.setMessage("Successfully");
+			res.setUrl(paymentUrl);
+			return ResponseEntity.ok(res);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			Throwable rootCause = e;
+			while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+				rootCause = rootCause.getCause();
+			}
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", "Lỗi CSDL: " + rootCause.getMessage(), "error", e.toString()));
 		}
-
-		// ================================
-		// ✅ 3. TẠO BOOKING VÀ TRẢ VỀ LINK QR
-		// ================================
-
-		Bookings createdBooking = null;
-		if (body.getShifts() != null && !body.getShifts().isEmpty()) {
-			createdBooking = bookingService.createBookingPermanent(
-					username,
-					body.getAmount(),
-					body.getPhone(),
-					body.getNote(),
-					body.getShifts(),
-					body.getFieldid(),
-					body.getPricefield(),
-					body.getStartDate(),
-					body.getEndDate());
-		} else {
-			// Trước khi tạo booking mới, xóa các đơn "Chưa Thanh Toán" đã hết hạn cho sân/ca này
-			bookingService.deleteExpiredBookingDetails(
-					body.getFieldid(),
-					body.getShiftId(),
-					body.getPlaydate(),
-					expiryTime);
-
-			createdBooking = bookingService.createBooking(
-					username,
-					body.getAmount(),
-					body.getPhone(),
-					body.getNote(),
-					body.getShiftId(),
-					body.getFieldid(),
-					body.getPlaydate(),
-					body.getPricefield());
-		}
-
-		if (createdBooking != null) {
-			createdBooking.setBookingstatus("Chưa Thanh Toán");
-			bookingService.update(createdBooking);
-		}
-
-		String orderId = "FIELD_" + createdBooking.getBookingid();
-		String description = "Thanh toan san " + createdBooking.getBookingid();
-		String paymentUrl = buildQrPageUrl(body.getAmount().toString(), orderId, description, voucherOfUserId);
-
-		PaymentResDTO res = new PaymentResDTO();
-		res.setStatus("Ok");
-		res.setMessage("Successfully");
-		res.setUrl(paymentUrl);
-		return ResponseEntity.ok(res);
 	}
 
 	// cart

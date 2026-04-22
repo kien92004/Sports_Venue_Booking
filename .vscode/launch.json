@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-SportifyApplication<Sportify>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "duan.sportify.SportifyApplication",
+            "projectName": "Sportify",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

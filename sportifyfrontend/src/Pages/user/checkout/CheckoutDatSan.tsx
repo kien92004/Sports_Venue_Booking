@@ -155,9 +155,9 @@ const CheckoutDatSan: React.FC = () => {
       discountCode: appliedCode || '', // Add applied voucher code
       shiftId: (shiftid) || null,
       shifts: shifts.map(s => ({ dayOfWeek: s.dayOfWeek, shiftId: s.shiftId })),
-      playdate: dateselect,       // định dạng 'yyyy-MM-dd'
-      startDate,                  // định dạng 'yyyy-MM-dd'
-      endDate,                    // định dạng 'yyyy-MM-dd' 
+      playdate: dateselect || null,       // định dạng 'yyyy-MM-dd'
+      startDate: startDate || null,                  // định dạng 'yyyy-MM-dd'
+      endDate: endDate || null,                    // định dạng 'yyyy-MM-dd' 
       voucherOfUserId: voucherOfUserId || undefined,            // định dạng 'yyyy-MM-dd'
       cardId: showCardList ? selectedCardId : undefined // Thêm cardId nếu chọn thẻ đã lưu
     };
@@ -183,7 +183,7 @@ const CheckoutDatSan: React.FC = () => {
 
       // ❌ Lỗi khác
       if (!res.ok) {
-        alert('Có lỗi xảy ra, vui lòng thử lại!');
+        alert(data?.message || data?.error || 'Có lỗi xảy ra, vui lòng thử lại!');
         return;
       }
 
