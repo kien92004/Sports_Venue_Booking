@@ -11,15 +11,16 @@ import Policy from "../../Pages/user/home/Policy";
 import Contact from "../../Pages/user/home/Contact";
 import Regulations from "../../Pages/user/home/Regulations";
 import Profile from "../../Pages/user/home/Profile";
-import TeamPage from "../../Pages/user/home/TeamPage";
-import TeamDetail from "../../Pages/user/home/TeamDetail";
+// import TeamPage from "../../Pages/user/home/TeamPage";
+// import TeamDetail from "../../Pages/user/home/TeamDetail";
+import TournamentPage from "../../Pages/user/home/TournamentPage";
 import CheckoutDatSan from "../../Pages/user/checkout/CheckoutDatSan";
 import OrderDetailPage from "../../Pages/user/history/OrderHistoryListDetail";
 import Cart from "../../Pages/user/history/Cart";
 // import CheckoutCart from "../../Pages/user/checkout/CheckoutCart";
 import CheckoutCartItems from "../../Pages/user/checkout/CheckoutCartItems";
 import QRPaymentPage from "../../Pages/user/checkout/QRPaymentPage";
-import FootballPredictionPage from "../../Pages/user/home/FootballPredictionPage";
+// import FootballPredictionPage from "../../Pages/user/home/FootballPredictionPage";
 import FieldHistoryList from "../../Pages/user/history/FieldHistoryList";
 import FieldHistoryListDetail from "../../Pages/user/history/FieldHistoryListDetail";
 import OrderHistoryList from "../../Pages/user/history/OrderHistoryList";
@@ -84,14 +85,21 @@ const UserRoutes: React.FC = () => (
     <Route path="cart/checkout/items" element={<CheckoutCartItems />} />
     
 
-    {/* Team */}
+    {/* Tournament */}
+    <Route path="tournament" element={<TournamentPage />} />
+    <Route path="tournament/create" element={<TournamentPage isCreate={true} />} />
+    <Route path="tournament/detail/:id" element={<TournamentPage isDetail={true} />} />
+
+    {/* Team - Disabled
     <Route path="team" element={<TeamPage />} />
     <Route path="team/:sporttypeid" element={<TeamPage />} />
     <Route path="team/detailteam/:teamId" element={<TeamDetail />} />
     <Route path="team/detailteam/:teamId/exit" element={<TeamDetail />} />
+    */}
 
-{/* prediction */}
+    {/* prediction - Disabled
     <Route path="football-prediction" element={<FootballPredictionPage />} />
+    */}
     {/* <Route path="football-test" element={<FootballTestPage />} /> */}
     {/* <Route path="prediction" element={<FootballTestPage />} /> */}
 

@@ -101,6 +101,18 @@ const Sidebar: React.FC = () => {
             </NavLink>
           </li>
 
+          <li className="nav-item mb-1">
+            <NavLink
+              to="/admin/tournaments"
+              className={({ isActive }) =>
+                `nav-link d-flex align-items-center py-2 px-3 rounded text-dark${isActive ? ' active' : ''}`
+              }
+            >
+              <i className="bi bi-trophy mr-3"></i>
+              <span>Quản lý Giải đấu</span>
+            </NavLink>
+          </li>
+
           {/* Dropdown Menu - Khác */}
           <li className="nav-item mb-1">
             <div className="accordion" id="otherAccordion">

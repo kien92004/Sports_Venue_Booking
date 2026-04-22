@@ -19,17 +19,19 @@ import OrderProductPage from "../../Pages/admin/OrderProduct";
 import ProductPage from "../../Pages/admin/Product";
 import ReportBookingPage from "../../Pages/admin/ReportBooking";
 import ReportOrderPage from "../../Pages/admin/ReportOrder";
+import TournamentManager from "../../Pages/admin/TournamentManager";
 import VoucherPage from "../../Pages/admin/Voucher";
 
 const AdminRoutes: React.FC = () => (
   <Routes>
     <Route path="dashboard" element={<Dashboard />} />
+    <Route path="tournaments" element={<TournamentManager />} />
     <Route path="manager-file-active" element={<ManggerFileActive />} />
     <Route path="manager-file-active-detail/:fieldId" element={<ManagerFieldActiveDetail />} />
     <Route path="accounts" element={<AccountPage />} />
     <Route path="bookings" element={<BookingPage />} />
-    <Route path="/manager-bookings" element={<FieldManager />} />
-    <Route path="/manager-orders" element={<OrderManager />} />
+    <Route path="manager-bookings" element={<FieldManager />} />
+    <Route path="manager-orders" element={<OrderManager />} />
     <Route path="products" element={<ProductPage />} />
     <Route path="fields" element={<FieldPage />} />
     <Route path="events" element={<EventPage />} />
