@@ -24,15 +24,7 @@ export default function Navbar() {
               <li className="nav-item">
                 <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/field">Sân</NavLink>
               </li>
-              <li className="nav-item dropdown">
-                <a className="nav-link dropdown-toggle" id="tournamentDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  Giải đấu
-                </a>
-                <div className="dropdown-menu" aria-labelledby="tournamentDropdown">
-                  <NavLink className={({ isActive }) => `dropdown-item${isActive ? ' active' : ''}`} to="/sportify/tournament">Danh sách giải đấu</NavLink>
-                  <NavLink className={({ isActive }) => `dropdown-item${isActive ? ' active' : ''}`} to="/sportify/tournament/create">Tạo giải đấu</NavLink>
-                </div>
-              </li>
+
               <li className="nav-item">
                 <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/sportify/product">Shop</NavLink>
               </li>

@@ -13,7 +13,7 @@ import Regulations from "../../Pages/user/home/Regulations";
 import Profile from "../../Pages/user/home/Profile";
 // import TeamPage from "../../Pages/user/home/TeamPage";
 // import TeamDetail from "../../Pages/user/home/TeamDetail";
-import TournamentPage from "../../Pages/user/home/TournamentPage";
+
 import CheckoutDatSan from "../../Pages/user/checkout/CheckoutDatSan";
 import OrderDetailPage from "../../Pages/user/history/OrderHistoryListDetail";
 import Cart from "../../Pages/user/history/Cart";
@@ -85,10 +85,7 @@ const UserRoutes: React.FC = () => (
     <Route path="cart/checkout/items" element={<CheckoutCartItems />} />
     
 
-    {/* Tournament */}
-    <Route path="tournament" element={<TournamentPage />} />
-    <Route path="tournament/create" element={<TournamentPage isCreate={true} />} />
-    <Route path="tournament/detail/:id" element={<TournamentPage isDetail={true} />} />
+
 
     {/* Team - Disabled
     <Route path="team" element={<TeamPage />} />

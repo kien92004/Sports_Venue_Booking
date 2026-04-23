@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import AdminRoutes from "./admin/AdminRoutes";
 import OwnerRoutes from "./owner/OwnerRoutes";
 import HomeRouter from "./user/HomeRouter";
-import TournamentManager from "../Pages/admin/TournamentManager";
+
 import Layout from "../layouts/Layout";
 import ForgetPass from "../Pages/security/ForgetPass";
 import Login from "../Pages/security/Login";
@@ -33,7 +33,7 @@ const AppRouter = () => (
 
         {/* Admin site */}
         <Route path="admin/*" element={<LayoutAdmin />}>
-          <Route path="tournaments" element={<TournamentManager />} />
+
           <Route path="*" element={<AdminRoutes />} />
         </Route>
 
