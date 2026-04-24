@@ -158,7 +158,10 @@ const OrderList: React.FC = () => {
         body: JSON.stringify([orderId]),
       });
 
-      if (!res.ok) throw new Error("delete failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Xóa đơn hàng thất bại");
+      }
 
       setOrders(prev => prev.filter(order => order.orderid !== orderId));
       setOrderPreviews(prev => {
@@ -168,7 +171,7 @@ const OrderList: React.FC = () => {
       });
     } catch (err) {
       console.error("Delete order error", err);
-      window.alert("Xóa đơn hàng thất bại. Vui lòng thử lại.");
+      window.alert(err instanceof Error ? err.message : "Xóa đơn hàng thất bại. Vui lòng thử lại.");
     } finally {
       setProcessingIds(prev => prev.filter(id => id !== orderId));
     }
@@ -190,13 +193,16 @@ const OrderList: React.FC = () => {
         body: JSON.stringify(ids),
       });
 
-      if (!res.ok) throw new Error("delete failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Xóa tất cả đơn hàng thất bại");
+      }
 
       setOrders([]);
       setOrderPreviews({});
     } catch (err) {
       console.error("Delete all orders error", err);
-      window.alert("Xóa tất cả đơn hàng thất bại. Vui lòng thử lại.");
+      window.alert(err instanceof Error ? err.message : "Xóa tất cả đơn hàng thất bại. Vui lòng thử lại.");
     } finally {
       setBulkDeleting(false);
     }

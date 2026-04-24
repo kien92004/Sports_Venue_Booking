@@ -19,7 +19,7 @@ public interface OrderDAO extends JpaRepository<Orders, Integer> {
 	@Query(value = "SELECT orderid FROM orders WHERE username = :username AND orderid IN (:ids)", nativeQuery = true)
 	List<Integer> findOrderIdsForUser(@Param("username") String username, @Param("ids") List<Integer> ids);
 
-	@Modifying
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query(value = "DELETE FROM orderdetails WHERE orderid IN (:ids)", nativeQuery = true)
 	void deleteOrderDetailsByOrderIds(@Param("ids") List<Integer> ids);
 

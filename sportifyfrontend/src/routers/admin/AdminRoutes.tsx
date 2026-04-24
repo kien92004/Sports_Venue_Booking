@@ -21,6 +21,7 @@ import ReportBookingPage from "../../Pages/admin/ReportBooking";
 import ReportOrderPage from "../../Pages/admin/ReportOrder";
 
 import VoucherPage from "../../Pages/admin/Voucher";
+import PaymentLogPage from "../../Pages/admin/PaymentLog";
 
 const AdminRoutes: React.FC = () => (
   <Routes>
@@ -45,6 +46,7 @@ const AdminRoutes: React.FC = () => (
     <Route path="reportBooking" element={<ReportBookingPage />} />
     <Route path="reportOrder" element={<ReportOrderPage />} />
     <Route path="ai-support" element={<AiSupportPage />} />
+    <Route path="payment-logs" element={<PaymentLogPage />} />
   </Routes>
 );
 

@@ -97,7 +97,28 @@ const QRPaymentPage: React.FC = () => {
                   <p className="mt-4 text-muted">
                     <i className="fa fa-spinner fa-spin mr-2"></i> Hệ thống đang chờ nhận tiền...
                   </p>
-                  <p className="small text-danger">
+                  <button 
+                    className="btn btn-primary mt-2" 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(`${URL_BACKEND}/api/user/payment/status?orderId=${orderId}`);
+                        if (response.ok) {
+                          const data = await response.json();
+                          if (data.isPaid) {
+                            setIsSuccess(true);
+                            addNotification("Thanh toán đã được xác nhận!", "success");
+                          } else {
+                            addNotification("Hệ thống chưa nhận được tiền. Vui lòng đợi hoặc kiểm tra lại nội dung chuyển khoản.", "info");
+                          }
+                        }
+                      } catch (err) {
+                        addNotification("Lỗi khi kiểm tra trạng thái. Vui lòng thử lại.", "error");
+                      }
+                    }}
+                  >
+                    Tôi đã chuyển tiền, kiểm tra ngay
+                  </button>
+                  <p className="small text-danger mt-3">
                     * Vui lòng giữ nguyên trang này sau khi quét mã, hệ thống sẽ tự động xác nhận khi nhận được tiền.
                   </p>
                 </>

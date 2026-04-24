@@ -280,7 +280,7 @@ public class PaymentVNPayController {
 			}
 
 			String orderId = "FIELD_" + createdBooking.getBookingid();
-			String description = "Thanh toan san " + createdBooking.getBookingid();
+			String description = "Thanh toan san FIELD_" + createdBooking.getBookingid();
 			String paymentUrl = buildQrPageUrl(body.getAmount().toString(), orderId, description, voucherOfUserId);
 
 			PaymentResDTO res = new PaymentResDTO();
@@ -327,13 +327,16 @@ public class PaymentVNPayController {
 		newOrder.setUsername(userlogin);
 		newOrder.setCreatedate(currentDate);
 		newOrder.setTotalprice(totalPrice);
-		newOrder.setNote("Thanh toán giỏ hàng #" + cartid);
 		newOrder.setOrderstatus("Chưa Thanh Toán");
 		newOrder.setPaymentstatus(false);
 		newOrder.setAddress(user != null ? user.getAddress() : "");
 
 		// Lưu đơn hàng vào DB và giữ lại để cập nhật sau khi thanh toán thành công
 		saveOrder = ordersService.create(newOrder);
+		
+		// Cập nhật lại note với ID đơn hàng thực tế
+		saveOrder.setNote("Thanh toán đơn hàng #" + saveOrder.getOrderid());
+		ordersService.update(saveOrder);
 
 		// Tạo chi tiết đơn hàng (Orderdetails) từ giỏ hàng
 		String[] cartItemIdArray = cartItemIds.split(",");
@@ -369,7 +372,7 @@ public class PaymentVNPayController {
 		System.out.println("Username: " + saveOrder.getUsername());
 
 		String orderId = "CART_" + saveOrder.getOrderid();
-		String cartInfo = "Thanh toan gio hang " + saveOrder.getOrderid();
+		String cartInfo = "Thanh toan gio hang CART_" + saveOrder.getOrderid();
 		String paymentUrl = buildQrPageUrl(totalPrice.toString(), orderId, cartInfo, voucherOfUserId);
 
 		PaymentResDTO paymentResDTO = new PaymentResDTO();

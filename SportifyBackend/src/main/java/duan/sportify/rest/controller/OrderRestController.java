@@ -155,9 +155,15 @@ public class OrderRestController {
 					.body(Collections.singletonMap("error", "Không tìm thấy đơn hàng hợp lệ"));
 		}
 
-		orderDAO.deleteOrderDetailsByOrderIds(validIds);
-		orderDAO.deleteAllByIdInBatch(validIds);
-
-		return ResponseEntity.ok(Collections.singletonMap("deleted", validIds.size()));
+		try {
+			System.out.println(">>> Deleting orders for user: " + username + ", ids: " + validIds);
+			orderDAO.deleteOrderDetailsByOrderIds(validIds);
+			orderDAO.deleteAllByIdInBatch(validIds);
+			System.out.println(">>> Successfully deleted " + validIds.size() + " orders.");
+			return ResponseEntity.ok(Collections.singletonMap("deleted", validIds.size()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(500).body(Collections.singletonMap("error", "Lỗi server: " + e.getMessage()));
+		}
 	}
 }
