@@ -128,6 +128,8 @@ const BookingCalendar: React.FC = () => {
   const [selectedSport, setSelectedSport] = useState<string>("ALL");
   const [fieldFilter, setFieldFilter] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(() => formatInputDate(new Date()));
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const goToRelativeDate = (deltaDays: number) => {
     const base = new Date(selectedDate ? `${selectedDate}T00:00:00` : new Date());
@@ -273,6 +275,19 @@ const BookingCalendar: React.FC = () => {
       return true;
     });
   }, [availableFields, selectedSport, fieldFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatus, selectedSport, fieldFilter, selectedDate]);
+
+  const totalFieldPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredFields.length / pageSize));
+  }, [filteredFields.length]);
+
+  const paginatedFields = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredFields.slice(start, start + pageSize);
+  }, [filteredFields, currentPage]);
 
   const allowedFieldIds = useMemo(() => new Set(filteredFields.map((field) => field.id)), [filteredFields]);
 
@@ -555,7 +570,7 @@ const BookingCalendar: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredFields.map((field) => {
+                {paginatedFields.map((field) => {
                   const fieldBookings = bookingsForSelectedDate.filter(b => b.fieldId === field.id);
 
                   return (
@@ -640,6 +655,29 @@ const BookingCalendar: React.FC = () => {
             </table>
           )}
         </div>
+        {!eventsLoading && !eventsError && filteredFields.length > 0 && (
+          <div className="booking-pagination">
+            <button
+              type="button"
+              className="booking-pagination__btn"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
+              Trang trước
+            </button>
+            <span className="booking-pagination__info">
+              Trang {currentPage}/{totalFieldPages} - Hiển thị {paginatedFields.length}/{filteredFields.length} sân
+            </span>
+            <button
+              type="button"
+              className="booking-pagination__btn"
+              disabled={currentPage === totalFieldPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalFieldPages, prev + 1))}
+            >
+              Trang sau
+            </button>
+          </div>
+        )}
       </div>
 
       <BookingDetailModal

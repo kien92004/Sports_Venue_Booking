@@ -1,7 +1,6 @@
 import { Helmet } from "@dr.pogodin/react-helmet";
 import React, { useContext, useEffect } from "react";
 import { Outlet } from "react-router-dom";
-import AdminAIChatbox from "../components/admin/AdminAIChatbox";
 import Header from "../components/admin/Header";
 import Sidebar from "../components/admin/SideBar";
 import { AuthContext } from "../helper/AuthContext";
@@ -129,7 +128,6 @@ const LayoutAdmin: React.FC = () => {
       <div className="admin-layout">
         <Header username={user.username} />
         <Sidebar />
-        <AdminAIChatbox />
         <main className="main-content mt-5">
           <Outlet />
         </main>

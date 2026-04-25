@@ -342,17 +342,6 @@ const Sidebar: React.FC = () => {
               <span>Lịch sử giao dịch</span>
             </NavLink>
           </li>
-          <li className="nav-item mb-1">
-            <NavLink
-              to="/admin/ai-support"
-              className={({ isActive }) =>
-                `nav-link d-flex align-items-center py-2 px-3 rounded text-dark${isActive ? ' active' : ''}`
-              }
-            >
-              <i className="bi bi-robot mr-3"></i>
-              <span>AI hỗ trợ</span>
-            </NavLink>
-          </li>
         </ul>
       </div>
     </aside>
