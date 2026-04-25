@@ -37,6 +37,10 @@ const OrderList: React.FC = () => {
   const [processingIds, setProcessingIds] = useState<number[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [orderPreviews, setOrderPreviews] = useState<Record<number, OrderPreview | null>>({});
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(5);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const CLOUDINARY_BASE_URL = import.meta.env.VITE_CLOUDINARY_BASE_URL as string | undefined;
 
@@ -47,41 +51,45 @@ const OrderList: React.FC = () => {
     return `/user/images/${image}`;
   }, [CLOUDINARY_BASE_URL]);
 
+  const loadOrders = useCallback(async (page: number) => {
+    const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
+    try {
+      const res = await fetch(`${URL_BACKEND}/api/user/order/historyList?page=${page}&size=${pageSize}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        const sortedOrders = [...(data.orders || [])].sort((a: Order, b: Order) =>
+          new Date(b.createdate).getTime() - new Date(a.createdate).getTime() || b.orderid - a.orderid
+        );
+        setOrders(sortedOrders);
+        setCurrentPage(data.page ?? page);
+        setTotalPages(data.totalPages ?? 0);
+        setTotalElements(data.totalElements ?? 0);
+      } else {
+        setOrders([]);
+        setOrderPreviews({});
+      }
+    } catch {
+      setOrders([]);
+      setOrderPreviews({});
+    }
+  }, [pageSize]);
+
   useEffect(() => {
     let isActive = true;
-    const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
-
-    const loadOrders = async () => {
-      try {
-        const res = await fetch(`${URL_BACKEND}/api/user/order/historyList`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        if (!isActive) return;
-        if (data.success) {
-          setOrders(data.orders);
-        } else {
-          setOrders([]);
-          setOrderPreviews({});
-        }
-      } catch {
-        if (isActive) {
-          setOrders([]);
-          setOrderPreviews({});
-        }
-      }
-    };
-
-    loadOrders();
+    loadOrders(currentPage).then(() => {
+      if (!isActive) return;
+    });
 
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [currentPage, loadOrders]);
 
   useEffect(() => {
     const pendingOrders = orders.filter(order => orderPreviews[order.orderid] === undefined);
@@ -151,11 +159,10 @@ const OrderList: React.FC = () => {
     const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
     try {
       setProcessingIds(prev => [...prev, orderId]);
-      const res = await fetch(`${URL_BACKEND}/sportify/rest/orders/deleteMultiple`, {
-        method: "POST",
+      const res = await fetch(`${URL_BACKEND}/api/user/order/cancelOrder/${orderId}`, {
+        method: "DELETE",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([orderId]),
       });
 
       if (!res.ok) {
@@ -169,6 +176,12 @@ const OrderList: React.FC = () => {
         delete next[orderId];
         return next;
       });
+      const isLastItemOnPage = orders.length === 1 && currentPage > 0;
+      if (isLastItemOnPage) {
+        setCurrentPage(prev => prev - 1);
+      } else {
+        await loadOrders(currentPage);
+      }
     } catch (err) {
       console.error("Delete order error", err);
       window.alert(err instanceof Error ? err.message : "Xóa đơn hàng thất bại. Vui lòng thử lại.");
@@ -186,7 +199,7 @@ const OrderList: React.FC = () => {
 
     try {
       setBulkDeleting(true);
-      const res = await fetch(`${URL_BACKEND}/sportify/rest/orders/deleteMultiple`, {
+      const res = await fetch(`${URL_BACKEND}/api/user/order/historyList/deleteMultiple`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -198,8 +211,9 @@ const OrderList: React.FC = () => {
         throw new Error(errorData.error || "Xóa tất cả đơn hàng thất bại");
       }
 
-      setOrders([]);
       setOrderPreviews({});
+      setCurrentPage(0);
+      await loadOrders(0);
     } catch (err) {
       console.error("Delete all orders error", err);
       window.alert(err instanceof Error ? err.message : "Xóa tất cả đơn hàng thất bại. Vui lòng thử lại.");
@@ -249,7 +263,7 @@ const OrderList: React.FC = () => {
                   <h3 className="mb-0 text-uppercase" style={{ letterSpacing: 1 }}>Danh sách đơn hàng</h3>
                 </div>
                 <div className="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-                  <h5 className="mb-0">Lịch sử đơn hàng gần nhất</h5>
+                  <h5 className="mb-0">Lịch sử đơn hàng gần nhất ({totalElements})</h5>
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={handleDeleteAll}
@@ -363,6 +377,28 @@ const OrderList: React.FC = () => {
                     </div>
                   );
                 })}
+
+                {totalPages > 1 && (
+                  <div className="col-12 d-flex justify-content-center align-items-center gap-2 py-3">
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={currentPage === 0}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 0))}
+                    >
+                      Trước
+                    </button>
+                    <span className="px-2">
+                      Trang {currentPage + 1}/{totalPages}
+                    </span>
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={currentPage >= totalPages - 1}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1))}
+                    >
+                      Sau
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

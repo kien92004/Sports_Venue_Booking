@@ -4,6 +4,8 @@ import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +17,8 @@ public interface OrderDAO extends JpaRepository<Orders, Integer> {
 
 	@Query("SELECT o FROM Orders o WHERE o.users.username = ?1")
 	List<Orders> findByUsername(String username);
+
+	Page<Orders> findByUsernameOrderByCreatedateDescOrderidDesc(String username, Pageable pageable);
 
 	@Query(value = "SELECT orderid FROM orders WHERE username = :username AND orderid IN (:ids)", nativeQuery = true)
 	List<Integer> findOrderIdsForUser(@Param("username") String username, @Param("ids") List<Integer> ids);
