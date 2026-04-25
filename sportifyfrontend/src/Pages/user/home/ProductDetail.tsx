@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import CommentComponent from '../../../components/user/CommentComponent';
 import HeroSection from "../../../components/user/Hero";
+import getImageUrl from '../../../helper/getImageUrl';
 import { useNotification } from '../../../helper/NotificationContext';
 import { useCart } from '../../../helper/useCartCount';
 import { addProductToCart, fetchProductDetail } from '../../../service/user/home/productApi';
@@ -25,12 +26,15 @@ interface Product {
 
 const ProductDetail: React.FC = () => {
   const productid = useParams().productid as string;
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [totalPrice, setTotalPrice] = useState<number>(0);
   const [addQuantity, setAddQuantity] = useState<number>(1);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
   const { addNotification } = useNotification();
   const { incrementCartCount } = useCart();
+  const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
     fetchProductDetail(productid)
@@ -59,6 +63,35 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (buyNowLoading) return;
+    try {
+      setBuyNowLoading(true);
+      const res = await fetch(`${URL_BACKEND}/api/user/cart/buy-now/${productid}?quantity=${addQuantity}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        addNotification(data?.message || "Không thể mua ngay, vui lòng thử lại", "error");
+        return;
+      }
+
+      incrementCartCount(addQuantity);
+      const checkoutUrl = data.checkoutUrl || `/sportify/cart/checkout/items?ids=${data.cartItemId}`;
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      console.error("Buy now failed:", err);
+      addNotification("Có lỗi khi xử lý mua ngay!", "error");
+    } finally {
+      setBuyNowLoading(false);
+    }
+  };
+
   if (!product) return <div>Loading...</div>;
 
   return (
@@ -77,11 +110,16 @@ const ProductDetail: React.FC = () => {
         <div className="container">
           <div className="row" style={{ background: 'white' }}>
             <div className="col-lg-6 mb-5">
-              <a href="#" className="image-popup prod-img-bg">
+              <a
+                href="#"
+                className="image-popup prod-img-bg d-flex align-items-center justify-content-center"
+                style={{ minHeight: 420, backgroundColor: "#f8f9fa", borderRadius: 8, padding: 12 }}
+              >
                 <img
-                  src={`/user/images/products_img/${product.image}`}
+                  src={getImageUrl(product.image)}
                   className="img-fluid"
                   alt={product.productname}
+                  style={{ width: "100%", maxHeight: 420, objectFit: "contain" }}
                 />
               </a>
             </div>
@@ -138,12 +176,14 @@ const ProductDetail: React.FC = () => {
                 </button>
               </p>
               <p className="mt-4">
-                <a
-                  href='/sportify/cart/view'
-                  className="btn btn-success "
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={!product.productstatus || buyNowLoading}
+                  className="btn btn-success"
                 >
-                  Mua ngay
-                </a>
+                  {buyNowLoading ? "Đang xử lý..." : "Mua ngay"}
+                </button>
               </p>
             </div>
           </div>

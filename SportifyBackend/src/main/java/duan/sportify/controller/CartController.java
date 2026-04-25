@@ -48,6 +48,38 @@ public class CartController {
                 "success", true, "cart", cart));
     }
 
+    @PostMapping("/buy-now/{productId}")
+    public ResponseEntity<?> buyNow(HttpServletRequest request,
+            @PathVariable Integer productId,
+            @RequestParam(defaultValue = "1") int quantity) {
+        String username = (String) request.getSession().getAttribute("username");
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "User not logged in"));
+        }
+
+        Cart cart = cartService.addToCart(username, productId, quantity);
+        Integer cartItemId = null;
+        if (cart != null && cart.getItems() != null) {
+            for (CartItem item : cart.getItems()) {
+                if (item.getProduct() != null && item.getProduct().getProductid().equals(productId)) {
+                    cartItemId = item.getCartItemId();
+                    break;
+                }
+            }
+        }
+
+        if (cartItemId == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Không xác định được sản phẩm trong giỏ"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "cartItemId", cartItemId,
+                "checkoutUrl", "/sportify/cart/checkout/items?ids=" + cartItemId));
+    }
+
     @GetMapping("/view")
     public Map<String, Object> viewCart(HttpSession session) {
         Map<String, Object> resp = new HashMap<>();

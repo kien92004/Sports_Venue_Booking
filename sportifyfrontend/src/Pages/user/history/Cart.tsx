@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import getImageUrl from "../../../helper/getImageUrl";
 import { useCart } from "../../../helper/useCartCount";
 
 const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
@@ -327,7 +328,19 @@ const Cart: React.FC = () => {
                           />
                         </td>
                         <td>
-                          <img className="img" alt="Error" src={`/user/images/${item.image}`} />
+                          <img
+                            className="img"
+                            alt={item.productName || "Sản phẩm"}
+                            src={getImageUrl(item.image ?? null)}
+                            style={{
+                              width: 96,
+                              height: 96,
+                              objectFit: "cover",
+                              borderRadius: 8,
+                              border: "1px solid #eee",
+                              backgroundColor: "#fff"
+                            }}
+                          />
                         </td>
                         <td>
                           <div className="email">

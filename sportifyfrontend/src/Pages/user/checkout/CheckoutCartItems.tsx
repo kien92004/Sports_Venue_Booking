@@ -2,6 +2,7 @@ const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PaymentExpression from "../../../components/user/PaymentExpression";
+import getImageUrl from "../../../helper/getImageUrl";
 import VoucherSelect from "../../../components/user/VoucherSelect";
 import { useNotification } from "../../../helper/NotificationContext";
 
@@ -228,12 +229,18 @@ const CheckoutCartItems: React.FC = () => {
                     <div className="mb-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                       {items.map((item) => (
                         <div key={item.cartItemId} className="d-flex align-items-center mb-2 pb-2 border-bottom">
-                          <div className="img mr-3" style={{ width: 60, height: 60, minWidth: 60 }}>
+                          <div className="img mr-3" style={{ width: 88, height: 88, minWidth: 88 }}>
                             {item.image ? (
                               <img
-                                src={`/user/images/products_img/${item.image}`}
+                                src={getImageUrl(item.image)}
                                 alt="sp"
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  borderRadius: 8,
+                                  border: "1px solid #eee"
+                                }}
                               />
                             ) : (
                               <div className="bg-light d-flex align-items-center justify-content-center"
