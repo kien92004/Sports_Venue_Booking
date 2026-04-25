@@ -349,14 +349,6 @@ const AIChatbox: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [userId, setUserId] = useState<string>("");
 
-  // Quick replies suggestions
-  const quickReplies = [
-    "🛍️ Sản phẩm nào tốt?",
-    "🏟️ Cho thuê sân",
-    "⚽ Sự kiện gần đây",
-    "📞 Liên hệ với tôi"
-  ];
-
   // Initialize userId from localStorage
   React.useEffect(() => {
     let storedUserId = localStorage.getItem("aichatbox_userId");
@@ -683,21 +675,10 @@ const AIChatbox: React.FC = () => {
             <div className="ai-welcome-container">
               <div className="ai-welcome-emoji">👋</div>
               <div className="ai-welcome-title">
-                Xin chào! Tôi là Sportify AI
+                Sportify AI xin chào! Mình có thể giúp gì cho bạn.
               </div>
               <div className="ai-welcome-text">
                 Hỏi tôi về sản phẩm, sân, đội hoặc bất cứ điều gì!
-              </div>
-              <div className="ai-quick-replies">
-                {quickReplies.map((reply, i) => (
-                  <button
-                    key={i}
-                    className="ai-quick-reply"
-                    onClick={() => ask(reply)}
-                  >
-                    {reply}
-                  </button>
-                ))}
               </div>
             </div>
           ) : (

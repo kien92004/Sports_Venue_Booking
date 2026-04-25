@@ -73,16 +73,6 @@ const OwnerAIChatbox: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [ownerId, setOwnerId] = useState<string>("");
 
-  // Quick replies suggestions for owner
-  const quickReplies = [
-    "📊 Quản lý sân thể thao",
-    "🕐 Quản lý thời gian mở cửa",
-    "📅 Quản lý đặt sân",
-    "💰 Thống kê doanh thu",
-    "👥 Quản lý khách hàng",
-    "📝 Xem đánh giá"
-  ];
-
   // Initialize ownerId from localStorage
   React.useEffect(() => {
     let storedOwnerId = localStorage.getItem("owneraichatbox_ownerId");
@@ -421,21 +411,10 @@ const OwnerAIChatbox: React.FC = () => {
             <div className="ai-welcome-container">
               <div className="ai-welcome-emoji">🤖</div>
               <div className="ai-welcome-title">
-                Xin chào chủ sân! Tôi là Sportify Owner AI
+                Sportify AI xin chào! Mình có thể giúp gì cho bạn.
               </div>
               <div className="ai-welcome-text">
                 Hỏi tôi về quản lý sân, thời gian mở cửa, đặt sân, doanh thu, khách hàng, đánh giá hoặc bất cứ điều gì!
-              </div>
-              <div className="ai-quick-replies">
-                {quickReplies.map((reply, i) => (
-                  <button
-                    key={i}
-                    className="ai-quick-reply"
-                    onClick={() => ask(reply)}
-                  >
-                    {reply}
-                  </button>
-                ))}
               </div>
             </div>
           ) : (

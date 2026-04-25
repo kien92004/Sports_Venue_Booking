@@ -1,9 +1,13 @@
 package duan.sportify.service.impl;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -72,8 +76,10 @@ public class GeminiServiceImpl implements AIService {
             List<Field> fields = fieldService.findAll();
             List<Eventweb> events = eventService.findAll();
 
-            // RAG: Trích xuất ý định tìm kiếm sân bằng Java thay vì gọi API để tránh lỗi Rate Limit (429)
             String lowerMessage = message.toLowerCase();
+            PriceQuery priceQuery = extractPriceQuery(lowerMessage);
+
+            // RAG: Trích xuất ý định tìm kiếm sân bằng Java thay vì gọi API để tránh lỗi Rate Limit (429)
             List<Field> filteredFields = fields.stream()
                     .filter(f -> {
                         String addr = f.getAddress() != null ? f.getAddress().toLowerCase() : "";
@@ -123,9 +129,21 @@ public class GeminiServiceImpl implements AIService {
                 System.out.println("⚠️ Không tìm thấy sân nào khớp địa điểm, sử dụng danh sách mặc định.");
             }
 
+            // Lọc theo giá cho sân nếu người dùng có ý định hỏi giá sân
+            if (isFieldPriceIntent(lowerMessage)) {
+                fields = applyFieldPriceFilter(fields, priceQuery, lowerMessage);
+                System.out.println("💰 Sau lọc giá sân còn: " + fields.size());
+            }
+
+            // Lọc theo giá cho sản phẩm nếu người dùng có ý định hỏi giá sản phẩm
+            if (isProductPriceIntent(lowerMessage)) {
+                products = applyProductPriceFilter(products, priceQuery, lowerMessage);
+                System.out.println("🛍️ Sau lọc giá sản phẩm còn: " + products.size());
+            }
+
             // Xây dựng context HTML thông minh, chỉ gửi những dữ liệu liên quan để tiết kiệm token
             String productHTML = "";
-            if (lowerMessage.contains("sản phẩm") || lowerMessage.contains("áo") || lowerMessage.contains("giày") || lowerMessage.contains("bóng") || lowerMessage.contains("mua")) {
+            if (isProductIntent(lowerMessage)) {
                 productHTML = buildProductHTML(products);
             }
             
@@ -362,5 +380,141 @@ public class GeminiServiceImpl implements AIService {
     @Override
     public Object data() {
         return new Object();
+    }
+
+    private boolean isProductIntent(String lowerMessage) {
+        return lowerMessage.contains("sản phẩm")
+                || lowerMessage.contains("áo")
+                || lowerMessage.contains("giày")
+                || lowerMessage.contains("bóng")
+                || lowerMessage.contains("mua")
+                || isProductPriceIntent(lowerMessage);
+    }
+
+    private boolean isFieldPriceIntent(String lowerMessage) {
+        return (lowerMessage.contains("sân") || lowerMessage.contains("thuê sân"))
+                && hasPriceKeyword(lowerMessage);
+    }
+
+    private boolean isProductPriceIntent(String lowerMessage) {
+        return (lowerMessage.contains("sản phẩm")
+                || lowerMessage.contains("đồ")
+                || lowerMessage.contains("áo")
+                || lowerMessage.contains("giày")
+                || lowerMessage.contains("vợt")
+                || lowerMessage.contains("bóng"))
+                && hasPriceKeyword(lowerMessage);
+    }
+
+    private boolean hasPriceKeyword(String lowerMessage) {
+        return lowerMessage.contains("giá")
+                || lowerMessage.contains("rẻ")
+                || lowerMessage.contains("đắt")
+                || lowerMessage.contains("dưới")
+                || lowerMessage.contains("trên")
+                || lowerMessage.contains("từ")
+                || lowerMessage.contains("khoảng");
+    }
+
+    private List<Field> applyFieldPriceFilter(List<Field> fields, PriceQuery query, String lowerMessage) {
+        List<Field> result = new ArrayList<>(fields);
+        if (query.min != null || query.max != null) {
+            result = result.stream()
+                    .filter(f -> {
+                        double price = f.getPrice() != null ? f.getPrice() : 0.0;
+                        boolean minOk = query.min == null || price >= query.min;
+                        boolean maxOk = query.max == null || price <= query.max;
+                        return minOk && maxOk;
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (lowerMessage.contains("rẻ nhất") || lowerMessage.contains("thấp nhất")) {
+            result.sort(Comparator.comparingDouble(f -> f.getPrice() != null ? f.getPrice() : Double.MAX_VALUE));
+        } else if (lowerMessage.contains("đắt nhất") || lowerMessage.contains("cao nhất")) {
+            result.sort((a, b) -> Double.compare(
+                    b.getPrice() != null ? b.getPrice() : 0.0,
+                    a.getPrice() != null ? a.getPrice() : 0.0));
+        }
+        return result;
+    }
+
+    private List<Products> applyProductPriceFilter(List<Products> products, PriceQuery query, String lowerMessage) {
+        List<Products> result = new ArrayList<>(products);
+        if (query.min != null || query.max != null) {
+            result = result.stream()
+                    .filter(p -> {
+                        double price = getEffectiveProductPrice(p);
+                        boolean minOk = query.min == null || price >= query.min;
+                        boolean maxOk = query.max == null || price <= query.max;
+                        return minOk && maxOk;
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (lowerMessage.contains("rẻ nhất") || lowerMessage.contains("thấp nhất")) {
+            result.sort(Comparator.comparingDouble(this::getEffectiveProductPrice));
+        } else if (lowerMessage.contains("đắt nhất") || lowerMessage.contains("cao nhất")) {
+            result.sort((a, b) -> Double.compare(getEffectiveProductPrice(b), getEffectiveProductPrice(a)));
+        }
+        return result;
+    }
+
+    private double getEffectiveProductPrice(Products product) {
+        if (product == null) {
+            return 0.0;
+        }
+        Double discount = product.getDiscountprice();
+        if (discount != null && discount > 0) {
+            return discount;
+        }
+        return product.getPrice() != null ? product.getPrice() : 0.0;
+    }
+
+    private PriceQuery extractPriceQuery(String text) {
+        PriceQuery query = new PriceQuery();
+        String normalized = text.replace(",", ".").trim();
+
+        Pattern between = Pattern.compile("từ\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|m)?\\s*(đến|toi|tới|-)\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|m)?");
+        Matcher betweenMatcher = between.matcher(normalized);
+        if (betweenMatcher.find()) {
+            double a = parseMoney(betweenMatcher.group(1), betweenMatcher.group(2));
+            double b = parseMoney(betweenMatcher.group(4), betweenMatcher.group(5));
+            query.min = Math.min(a, b);
+            query.max = Math.max(a, b);
+            return query;
+        }
+
+        Pattern under = Pattern.compile("(dưới|nhỏ hơn|<=?)\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|m)?");
+        Matcher underMatcher = under.matcher(normalized);
+        if (underMatcher.find()) {
+            query.max = parseMoney(underMatcher.group(2), underMatcher.group(3));
+        }
+
+        Pattern over = Pattern.compile("(trên|lớn hơn|>=?)\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(k|nghìn|ngàn|tr|triệu|m)?");
+        Matcher overMatcher = over.matcher(normalized);
+        if (overMatcher.find()) {
+            query.min = parseMoney(overMatcher.group(2), overMatcher.group(3));
+        }
+
+        return query;
+    }
+
+    private double parseMoney(String numberPart, String unitPart) {
+        double value = Double.parseDouble(numberPart.replace(",", "."));
+        if (unitPart == null) {
+            return value;
+        }
+        String unit = unitPart.toLowerCase();
+        if (unit.startsWith("k") || unit.contains("ngh")) {
+            return value * 1_000;
+        }
+        if (unit.startsWith("tr") || unit.startsWith("m")) {
+            return value * 1_000_000;
+        }
+        return value;
+    }
+
+    private static class PriceQuery {
+        private Double min;
+        private Double max;
     }
 }

@@ -73,16 +73,6 @@ const AdminAIChatbox: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [adminId, setAdminId] = useState<string>("");
 
-  // Quick replies suggestions for admin
-  const quickReplies = [
-    "📊 Thống kê doanh thu",
-    "🛍️ Quản lý sản phẩm",
-    "⚽ Quản lý sân thể thao",
-    "👥 Quản lý tài khoản",
-    "📅 Quản lý sự kiện",
-    "📋 Xem danh sách đặt"
-  ];
-
   // Initialize adminId from localStorage
   React.useEffect(() => {
     let storedAdminId = localStorage.getItem("adminaichatbox_adminId");
@@ -421,21 +411,10 @@ const AdminAIChatbox: React.FC = () => {
             <div className="ai-welcome-container">
               <div className="ai-welcome-emoji">🤖</div>
               <div className="ai-welcome-title">
-                Xin chào Admin! Tôi là Sportify Admin AI
+                Sportify AI xin chào! Mình có thể giúp gì cho bạn.
               </div>
               <div className="ai-welcome-text">
                 Hỏi tôi về quản lý sản phẩm, sân, tài khoản, sự kiện, đặt sân, doanh thu hoặc bất cứ điều gì!
-              </div>
-              <div className="ai-quick-replies">
-                {quickReplies.map((reply, i) => (
-                  <button
-                    key={i}
-                    className="ai-quick-reply"
-                    onClick={() => ask(reply)}
-                  >
-                    {reply}
-                  </button>
-                ))}
               </div>
             </div>
           ) : (
