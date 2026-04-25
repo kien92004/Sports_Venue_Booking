@@ -8,7 +8,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -16,7 +19,11 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import duan.sportify.DTO.PaymentResDTO;
 import duan.sportify.DTO.PermanentPaymentRequest;
@@ -69,6 +79,16 @@ public class PaymentVNPayController {
 	duan.sportify.service.PaymentMethodService paymentMethodService;
 	@Autowired
 	duan.sportify.Repository.CartItemRepository cartItemRepository;
+
+	@Autowired
+	private duan.sportify.dao.PaymentLogDAO paymentLogDAO;
+	private final ObjectMapper objectMapper = new ObjectMapper();
+
+	@Value("${sepay.api.base-url:https://my.sepay.vn}")
+	private String sepayApiBaseUrl;
+
+	@Value("${sepay.api.token:}")
+	private String sepayApiToken;
 
 	@Autowired
 	appConfig appConfig;
@@ -385,37 +405,217 @@ public class PaymentVNPayController {
 
 	private String buildQrPageUrl(String amount, String orderId, String description, Integer voucherOfUserId) {
 		String frontendUrl = appConfig.getFrontendUrl();
-		return frontendUrl + "/sportify/qr-payment?amount=" + amount 
-				+ "&orderId=" + orderId 
+		String transferContent = orderId;
+		return frontendUrl + "/sportify/qr-payment?amount=" + amount
+				+ "&orderId=" + orderId
+				+ "&transferContent=" + urlEncode(transferContent)
 				+ "&voucher=" + (voucherOfUserId != null ? voucherOfUserId : 0)
-				+ "&desc=" + description.replaceAll(" ", "%20");
+				+ "&desc=" + urlEncode(description);
+	}
+
+	private String urlEncode(String value) {
+		return URLEncoder.encode(value != null ? value : "", StandardCharsets.UTF_8);
 	}
 
 	// Refund
 
 	@GetMapping("api/user/payment/status")
-	public ResponseEntity<?> checkPaymentStatus(@RequestParam("orderId") String orderId) {
+	public ResponseEntity<?> checkPaymentStatus(@RequestParam("orderId") String orderId,
+			@RequestParam(value = "amount", required = false) Double amount,
+			@RequestParam(value = "forceSync", required = false, defaultValue = "false") boolean forceSync) {
+		if (forceSync && amount != null && amount > 0) {
+			trySyncFromSePay(orderId, amount);
+		}
 		boolean isPaid = false;
 		if (orderId != null) {
 			if (orderId.startsWith("FIELD_")) {
 				try {
 					Integer bookingId = Integer.parseInt(orderId.substring(6));
 					Bookings booking = bookingService.findByBookingid(bookingId);
-					if (booking != null && "Đã Thanh Toán".equals(booking.getBookingstatus())) {
+					
+					// 1. Kiểm tra trạng thái trực tiếp trong bảng Bookings
+					if (booking != null && ("Đã Thanh Toán".equals(booking.getBookingstatus()) || 
+						"Đã Cọc".equals(booking.getBookingstatus()) || 
+						"Hoàn Thành".equals(booking.getBookingstatus()))) {
 						isPaid = true;
+					} 
+					// 2. Fallback: Nếu bảng Bookings chưa cập nhật nhưng đã có Log giao dịch (Admin thấy)
+					else {
+						if (hasPaymentLog(orderId, "FIELD") || (forceSync && hasRecentAmountMatch(amount, "FIELD"))) {
+							System.out.println(">>> Fallback: Found transaction log for " + orderId + ". Updating booking status.");
+							isPaid = true;
+							// Tự động cập nhật lại bảng Bookings nếu chưa cập nhật
+							if (booking != null && !"Đã Thanh Toán".equals(booking.getBookingstatus())) {
+								booking.setBookingstatus("Đã Thanh Toán");
+								booking.setPaymentdate(new java.util.Date());
+								bookingService.update(booking);
+							}
+						}
 					}
-				} catch (Exception e) {}
+				} catch (Exception e) {
+					System.err.println("Error checking FIELD payment status: " + e.getMessage());
+				}
 			} else if (orderId.startsWith("CART_")) {
 				try {
 					Integer cartOrderId = Integer.parseInt(orderId.substring(5));
 					Orders order = ordersService.findById(cartOrderId);
-					if (order != null && order.getPaymentstatus() != null && order.getPaymentstatus()) {
+					
+					// 1. Kiểm tra trạng thái trực tiếp trong bảng Orders
+					if (order != null && (order.getPaymentstatus() != null && order.getPaymentstatus() || 
+						"Đã Thanh Toán".equals(order.getOrderstatus()))) {
 						isPaid = true;
 					}
-				} catch (Exception e) {}
+					// 2. Fallback: Kiểm tra qua Log giao dịch
+					else {
+						if (hasPaymentLog(orderId, "CART") || (forceSync && hasRecentAmountMatch(amount, "CART"))) {
+							System.out.println(">>> Fallback: Found transaction log for " + orderId + ". Updating order status.");
+							isPaid = true;
+							if (order != null && (order.getPaymentstatus() == null || !order.getPaymentstatus())) {
+								order.setOrderstatus("Đã Thanh Toán");
+								order.setPaymentstatus(true);
+								order.setPaymentdate(new java.util.Date());
+								ordersService.update(order);
+							}
+						}
+					}
+				} catch (Exception e) {
+					System.err.println("Error checking CART payment status: " + e.getMessage());
+				}
 			}
 		}
 		return ResponseEntity.ok(Collections.singletonMap("isPaid", isPaid));
+	}
+
+	private boolean hasRecentAmountMatch(Double amount, String type) {
+		if (amount == null || amount <= 0) {
+			return false;
+		}
+
+		double epsilon = 1000.0; // cho phép lệch nhỏ do phí/làm tròn
+		Date since = new Date(System.currentTimeMillis() - 15 * 60 * 1000L);
+		List<duan.sportify.entities.PaymentLog> logs = paymentLogDAO.findRecentByAmountRange(
+				amount - epsilon,
+				amount + epsilon,
+				since);
+		if (logs.isEmpty()) {
+			return false;
+		}
+
+		for (duan.sportify.entities.PaymentLog log : logs) {
+			String content = log.getContent() != null ? log.getContent().toUpperCase() : "";
+			if ("FIELD".equals(type) && content.contains("FIELD")) {
+				return true;
+			}
+			if ("CART".equals(type) && (content.contains("CART")
+					|| content.contains("GIO HANG")
+					|| content.contains("DON HANG"))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void trySyncFromSePay(String orderId, Double amount) {
+		if (sepayApiToken == null || sepayApiToken.isBlank()) {
+			return;
+		}
+		try {
+			HttpHeaders headers = new HttpHeaders();
+			headers.setBearerAuth(sepayApiToken.trim());
+			HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+			String url = sepayApiBaseUrl + "/userapi/transactions/list?page=1&limit=20&sort=desc";
+			ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+			if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+				return;
+			}
+			JsonNode root = objectMapper.readTree(response.getBody());
+			JsonNode txs = root.path("transactions");
+			if (txs == null || !txs.isArray()) {
+				txs = root.path("data").path("transactions");
+			}
+			if (txs == null || !txs.isArray()) {
+				return;
+			}
+
+			String orderRefUpper = orderId != null ? orderId.toUpperCase() : "";
+			double epsilon = 1000.0;
+			for (JsonNode tx : txs) {
+				String content = tx.path("transaction_content").asText("");
+				if (content.isEmpty()) {
+					content = tx.path("content").asText("");
+				}
+				double transferAmount = tx.path("transfer_amount").asDouble(0);
+				if (transferAmount == 0) {
+					transferAmount = tx.path("amount_in").asDouble(0);
+				}
+				if (Math.abs(transferAmount - amount) > epsilon) {
+					continue;
+				}
+				String contentUpper = content.toUpperCase();
+				if (!contentUpper.contains(orderRefUpper)) {
+					continue;
+				}
+				if (hasPaymentLog(orderId, orderId.startsWith("FIELD_") ? "FIELD" : "CART")) {
+					return;
+				}
+				duan.sportify.entities.PaymentLog log = new duan.sportify.entities.PaymentLog();
+				log.setTransactionId(parseLong(tx.path("id").asText(null)));
+				log.setGateway(tx.path("gateway").asText("SEPAY"));
+				log.setAccountNumber(tx.path("account_number").asText(tx.path("accountNumber").asText(null)));
+				log.setContent(content);
+				log.setTransferAmount(transferAmount);
+				log.setReferenceCode(tx.path("reference_code").asText(tx.path("referenceCode").asText(null)));
+				log.setAccountName(tx.path("account_name").asText(tx.path("accountName").asText(null)));
+				log.setTransactionDate(new Date());
+				log.setLogDate(new Date());
+				paymentLogDAO.save(log);
+				return;
+			}
+		} catch (Exception e) {
+			System.err.println("SePay force sync failed: " + e.getMessage());
+		}
+	}
+
+	private Long parseLong(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		try {
+			return Long.parseLong(value);
+		} catch (Exception e) {
+			try {
+				return Double.valueOf(value).longValue();
+			} catch (Exception ex) {
+				return null;
+			}
+		}
+	}
+
+	private boolean hasPaymentLog(String orderId, String prefix) {
+		Set<String> candidates = buildOrderRefCandidates(orderId, prefix);
+		for (String candidate : candidates) {
+			List<duan.sportify.entities.PaymentLog> logs = paymentLogDAO.findByContentKeywordIgnoreCase(candidate);
+			if (!logs.isEmpty()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Set<String> buildOrderRefCandidates(String orderId, String prefix) {
+		Set<String> candidates = new LinkedHashSet<>();
+		candidates.add(orderId);
+
+		String numericPart = orderId.contains("_") ? orderId.substring(orderId.indexOf('_') + 1) : "";
+		if (!numericPart.isEmpty()) {
+			candidates.add(prefix + "_" + numericPart);
+			candidates.add(prefix + numericPart);
+			candidates.add(prefix + "#" + numericPart);
+			candidates.add(prefix + " #" + numericPart);
+			candidates.add(prefix + "-" + numericPart);
+			candidates.add(prefix + " " + numericPart);
+		}
+		return candidates;
 	}
 
 	@PostMapping("/api/user/payment/refund")

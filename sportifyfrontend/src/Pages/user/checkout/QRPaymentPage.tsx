@@ -12,19 +12,25 @@ const QRPaymentPage: React.FC = () => {
   const amount = searchParams.get("amount") || "0";
   const orderId = searchParams.get("orderId") || "";
   const desc = searchParams.get("desc") || "";
+  const transferContent = searchParams.get("transferContent") || orderId || desc;
 
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // URL tạo ảnh VietQR
-  const qrUrl = `https://img.vietqr.io/image/MB-0362947198-compact2.png?amount=${amount}&addInfo=${desc}&accountName=DANG%20DINH%20KIEN`;
+  // URL tạo ảnh VietQR - ưu tiên mã đơn chuẩn để webhook nhận diện ngay
+  const qrUrl = `https://img.vietqr.io/image/MB-0362947198-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(
+    transferContent
+  )}&accountName=DANG%20DINH%20KIEN`;
 
   // Polling check payment status
   useEffect(() => {
     if (!orderId || isSuccess) return;
+    const amountNumber = Number(amount);
+    const amountQuery = Number.isFinite(amountNumber) ? `&amount=${amountNumber}` : "";
 
-    const intervalId = setInterval(async () => {
+    const checkStatus = async (forceSync = false) => {
       try {
-        const response = await fetch(`${URL_BACKEND}/api/user/payment/status?orderId=${orderId}`, {
+        const forceQuery = forceSync ? "&forceSync=true" : "";
+        const response = await fetch(`${URL_BACKEND}/api/user/payment/status?orderId=${orderId}${amountQuery}${forceQuery}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -38,7 +44,7 @@ const QRPaymentPage: React.FC = () => {
             clearInterval(intervalId);
             addNotification("Thanh toán thành công! Hệ thống đã xác nhận.", "success");
             
-            // Xử lý redirect sau 2 giây
+            // Xử lý redirect sau ~2 giây để tổng thời gian phản hồi nhanh
             setTimeout(() => {
               if (orderId.startsWith("FIELD_")) {
                 navigate("/sportify/field/profile/historybooking");
@@ -51,10 +57,19 @@ const QRPaymentPage: React.FC = () => {
       } catch (error) {
         console.error("Error checking payment status:", error);
       }
-    }, 3000); // Check mỗi 3 giây
+    };
 
-    return () => clearInterval(intervalId);
-  }, [orderId, isSuccess, navigate, addNotification]);
+    // Check ngay lập tức để không phải chờ chu kỳ đầu
+    checkStatus();
+    const intervalId = setInterval(checkStatus, 1200); // check nhanh hơn để phản hồi 3-4 giây
+    // Sau 3.5 giây nếu chưa nhận webhook thì chủ động sync SePay 1 lần
+    const forceSyncTimer = setTimeout(() => checkStatus(true), 3500);
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(forceSyncTimer);
+    };
+  }, [orderId, amount, isSuccess, navigate, addNotification]);
 
   return (
     <>
@@ -92,7 +107,7 @@ const QRPaymentPage: React.FC = () => {
                     <p className="mb-2"><strong>Chủ tài khoản:</strong> ĐẶNG ĐÌNH KIÊN</p>
                     <p className="mb-2"><strong>Số tài khoản:</strong> 0362947198</p>
                     <p className="mb-2"><strong>Số tiền:</strong> <span className="text-danger font-weight-bold">{Number(amount).toLocaleString('vi-VN')} đ</span></p>
-                    <p className="mb-0"><strong>Nội dung CK:</strong> <span className="bg-warning px-2 py-1 rounded">{desc}</span></p>
+                    <p className="mb-0"><strong>Nội dung CK:</strong> <span className="bg-warning px-2 py-1 rounded">{transferContent}</span></p>
                   </div>
                   <p className="mt-4 text-muted">
                     <i className="fa fa-spinner fa-spin mr-2"></i> Hệ thống đang chờ nhận tiền...
@@ -101,7 +116,11 @@ const QRPaymentPage: React.FC = () => {
                     className="btn btn-primary mt-2" 
                     onClick={async () => {
                       try {
-                        const response = await fetch(`${URL_BACKEND}/api/user/payment/status?orderId=${orderId}`);
+                        const amountNumber = Number(amount);
+                        const amountQuery = Number.isFinite(amountNumber) ? `&amount=${amountNumber}` : "";
+                        const response = await fetch(
+                          `${URL_BACKEND}/api/user/payment/status?orderId=${orderId}${amountQuery}&forceSync=true`
+                        );
                         if (response.ok) {
                           const data = await response.json();
                           if (data.isPaid) {
