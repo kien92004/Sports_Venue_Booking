@@ -75,9 +75,15 @@ public interface EventDAO extends JpaRepository<Eventweb, Integer>{
             + "AND (eventtype like CONCAT('%', :eventtype, '%') OR :eventtype IS NULL)", nativeQuery = true)
         List<Eventweb> searchEventAdmin(@Param("nameevent") Optional<String> nameevent, @Param("eventtype") Optional<String> eventtype);
     
-    // tìm loại sự kiện
-    @Query("SELECT e FROM Eventweb e WHERE e.eventtype = :eventtype")
-    Page<Eventweb> findEventsByEventType(String eventtype, Pageable pageable);
+    // tìm loại sự kiện (không phân biệt hoa thường, khớp với UI/người dùng nhập)
+    @Query("SELECT e FROM Eventweb e WHERE LOWER(TRIM(e.eventtype)) = LOWER(TRIM(:eventtype)) ORDER BY e.datestart DESC")
+    Page<Eventweb> findEventsByEventTypeIgnoreCase(@Param("eventtype") String eventtype, Pageable pageable);
+
+    @Query(value = "SELECT * FROM eventweb WHERE LOWER(TRIM(eventtype)) = LOWER(TRIM(:eventtype)) "
+            + "AND (LOWER(nameevent) LIKE CONCAT('%', :keyword, '%') OR CAST(datestart AS CHAR) LIKE CONCAT('%', :keyword, '%')) "
+            + "ORDER BY datestart DESC", nativeQuery = true)
+    Page<Eventweb> searchEventsByTypeAndKeyword(@Param("eventtype") String eventtype, @Param("keyword") String keyword,
+            Pageable pageable);
 	
    
     // Tìm tin tức có loại thể thao(không phải là khuyến mãi với bảo trì)
@@ -85,6 +91,13 @@ public interface EventDAO extends JpaRepository<Eventweb, Integer>{
             "WHERE lower(eventtype) not LIKE 'Bảo trì' AND lower(eventtype) not LIKE 'Khuyến mãi' " +
             "ORDER BY datestart DESC", nativeQuery = true)
     Page<Eventweb> searchbtnTheThao(Pageable pageable);
+
+    /** Tin thể thao (đồng logic searchbtnTheThao) kèm từ khóa tên/gần-ngày */
+    @Query(value = "SELECT * FROM Eventweb "
+            + "WHERE lower(eventtype) not LIKE 'Bảo trì' AND lower(eventtype) not LIKE 'Khuyến mãi' "
+            + "AND (LOWER(nameevent) LIKE CONCAT('%', :keyword, '%') OR CAST(datestart AS CHAR) LIKE CONCAT('%', :keyword, '%')) "
+            + "ORDER BY datestart DESC", nativeQuery = true)
+    Page<Eventweb> searchEventsSportsWithKeyword(@Param("keyword") String keyword, Pageable pageable);
     
     // Tìm tin tức có loại khuyến mãi
     @Query(value = "SELECT * FROM Eventweb " +

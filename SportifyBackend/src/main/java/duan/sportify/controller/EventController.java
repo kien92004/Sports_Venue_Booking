@@ -31,17 +31,40 @@ public class EventController {
 	public ResponseEntity<?> view(
 		@RequestParam(value = "eventName", required = false, defaultValue = "") String eventName,
 		Pageable pageable,
-		@RequestParam(value = "keyword", required = false, defaultValue = "") String keyword
+		@RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+		@RequestParam(value = "eventType", required = false, defaultValue = "") String eventType
 	) {
 		Page<Eventweb> eventwebList;
-		int keywordLength = keyword == null ? 0 : keyword.length();
 		if (eventName == null) {
 	        eventName = "";
 	    }
-		if(keywordLength > 0 && eventName.isEmpty()) {
-			eventwebList = eventDAO.searchEvents(keyword, pageable);
+		if (keyword == null) {
+			keyword = "";
+		}
+		if (eventType == null) {
+			eventType = "";
+		}
+		String trimmedKeyword = keyword.trim();
+		String trimmedType = eventType.trim();
+		int keywordLength = trimmedKeyword.length();
+		boolean sportsFilter = trimmedType.equalsIgnoreCase("Thể thao");
+
+		if (keywordLength > 0 && !trimmedType.isEmpty()) {
+			if (sportsFilter) {
+				eventwebList = eventDAO.searchEventsSportsWithKeyword(trimmedKeyword, pageable);
+			} else {
+				eventwebList = eventDAO.searchEventsByTypeAndKeyword(trimmedType, trimmedKeyword, pageable);
+			}
+		} else if (!trimmedType.isEmpty()) {
+			if (sportsFilter) {
+				eventwebList = eventDAO.searchbtnTheThao(pageable);
+			} else {
+				eventwebList = eventDAO.findEventsByEventTypeIgnoreCase(trimmedType, pageable);
+			}
+		} else if (keywordLength > 0 && eventName.isEmpty()) {
+			eventwebList = eventDAO.searchEvents(trimmedKeyword, pageable);
 			
-		}else if(eventName.equalsIgnoreCase("thethao") && keywordLength==0) {
+		} else if(eventName.equalsIgnoreCase("thethao") && keywordLength==0) {
 			eventwebList = eventDAO.searchbtnTheThao(pageable);
 		}else if(eventName.equalsIgnoreCase("khuyenmai") && keywordLength==0) {
 			eventwebList = eventDAO.searchbtnKhuyenMai(pageable);

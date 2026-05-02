@@ -23,6 +23,12 @@ interface ApiResponse {
   size: number;
 }
 
+/**
+ * Thể thao → backend loại trừ Bảo trì & Khuyến mãi (gộp mọi môn: bóng đá, cầu lông, …).
+ * Các mục còn lại lọc theo đúng `eventtype` trong DB (không phân biệt hoa/thường).
+ */
+const EVENT_FILTER_TYPES = ['Thể thao', 'Bảo trì', 'Khuyến mãi'] as const;
+
 const Event: React.FC = () => {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [page, setPage] = useState<number>(0);
@@ -58,7 +64,12 @@ const Event: React.FC = () => {
   };
 
   const handleFilter = (type: string) => {
-    const newType = filterType === type ? '' : type; // toggle
+    if (type === '') {
+      setFilterType('');
+      fetchEventsData(0, '', keyword);
+      return;
+    }
+    const newType = filterType === type ? '' : type;
     setFilterType(newType);
     fetchEventsData(0, newType, keyword);
   };
@@ -67,9 +78,6 @@ const Event: React.FC = () => {
     if (p < 0 || p >= totalPages) return;
     fetchEventsData(p, filterType, keyword);
   };
-
-  // deduplicate event types from fetched events for the filter buttons
-  const eventTypes = Array.from(new Set(events.map((e:any) => e.eventtype).filter(Boolean))) as string[];
 
   return (
     <div>
@@ -84,30 +92,69 @@ const Event: React.FC = () => {
       <section className="col-12 ftco-section testimony-section img"
         style={{ backgroundImage: "url(/user/images/bgAll.png)" }}>
         <div className="overlay1"></div>
-        <div className="col-12 justify-content-center d-flex">
-          <div className="col-10 d-flex">
-            <div className="col-4 bg-dark justify-content-center d-flex">
-              <div className="col-8">
-                <button 
-                  className={`col-12 mt-5 rounded ${filterType === '' ? 'btn-primary' : 'bg-light'}`}
-                  type="button"
-                  onClick={() => handleFilter('')}
-                >
-                  Tất cả
-                </button>
-                {eventTypes.map((type) => (
-                  <button 
-                    key={type}
-                    className={`col-12 mt-5 rounded ${filterType === type ? 'btn-primary' : 'bg-light'}`}
+        <div className="col-12 justify-content-center d-flex px-2 px-lg-3">
+          <div className="col-12 col-xl-11 d-flex flex-column flex-lg-row gap-4 align-items-stretch pt-4 pb-2">
+            <div
+              className="news-filter-sidebar col-12 col-lg-4 col-xl-3 d-flex flex-column"
+              style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' }}
+            >
+              <div
+                className="rounded-4 shadow p-4 h-100 d-flex flex-column"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.94)',
+                  border: '1px solid rgba(25, 135, 84, 0.15)',
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                <h5 className="fw-semibold text-success mb-3 small text-uppercase" style={{ letterSpacing: '0.06em' }}>
+                  Loại tin tức
+                </h5>
+                <div className="d-grid gap-2">
+                  <button
                     type="button"
-                    onClick={() => handleFilter(type)}
+                    className={`btn rounded-3 py-2 fw-medium ${
+                      filterType === '' ? 'btn-success shadow-sm' : 'btn-outline-success'
+                    }`}
+                    onClick={() => handleFilter('')}
                   >
-                    {type}
+                    Tất cả
                   </button>
-                ))}
+                  {EVENT_FILTER_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={`btn rounded-3 py-2 fw-medium ${
+                        filterType === type ? 'btn-success shadow-sm' : 'btn-outline-success'
+                      }`}
+                      onClick={() => handleFilter(type)}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                <form className="mt-4 pt-3 border-top border-success border-opacity-25" onSubmit={handleSearchSubmit}>
+                  <label htmlFor="event-keyword" className="form-label small text-muted mb-1">
+                    Tìm kiếm theo tên
+                  </label>
+                  <div className="input-group shadow-sm rounded-3 overflow-hidden">
+                    <input
+                      id="event-keyword"
+                      className="form-control border-0"
+                      placeholder="Nhập tên sự kiện..."
+                      maxLength={200}
+                      aria-label="Tìm kiếm theo tên"
+                      type="search"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                    />
+                    <button className="btn btn-success px-3" type="submit" aria-label="Tìm">
+                      <span className="fa fa-search" aria-hidden />
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
-            <div id="carouselExampleIndicators" className="carousel slide col-8"
+            <div id="carouselExampleIndicators" className="carousel slide col-12 col-lg-8 flex-grow-1"
               data-ride="carousel" style={{ width: "100%", height: "400px" }}>
               <ol className="carousel-indicators">
                 <li data-target="#carouselExampleIndicators" data-slide-to="0" className="active"></li>
@@ -142,27 +189,8 @@ const Event: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-12 row mt-5 justify-content-center">
-          <form className="d-flex col-5" onSubmit={handleSearchSubmit}>
-            <input 
-              className="form-control rounded-0 me-2 col-9"
-              placeholder="Tìm kiếm theo tên..." 
-              maxLength={200} 
-              aria-label="Search"
-              type="search" 
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-            <button className="btn btn-success col-3 rounded-0" type="submit">Search</button>
-          </form>
-        </div>
-
-        {/* Search results message */}
-        <div className="d-flex justify-content-center col-12 mt-2">
-          <div className="col-5 justify-content-center">
-            {loading && <div>Đang tải...</div>}
-            {!loading && events.length === 0 && keyword && <div>Không tìm thấy sự kiện nào.</div>}
-          </div>
+        <div className="col-12 d-flex justify-content-center px-3 py-4">
+          {loading && <div className="text-muted">Đang tải...</div>}
         </div>
       </section>
 
@@ -180,10 +208,13 @@ const Event: React.FC = () => {
                 <hr className="col-2 mb-5 hr1" />
               </div>
 
-              {/* No results message */}
               {!loading && events.length === 0 && (
                 <div className="row d-flex">
-                  <div className="col-12 text-center">Không tìm thấy sự kiện nào.</div>
+                  <div className="col-12 text-center text-muted py-5">
+                    {keyword.trim() || filterType
+                      ? 'Không tìm thấy tin tức phù hợp với bộ lọc hoặc từ khóa.'
+                      : 'Chưa có tin tức để hiển thị.'}
+                  </div>
                 </div>
               )}
 
