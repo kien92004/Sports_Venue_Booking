@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import duan.sportify.GlobalExceptionHandler;
 import duan.sportify.dao.ProductDAO;
@@ -71,23 +72,56 @@ public class Admin_ProductRestController {
 		if (imageFile != null && !imageFile.isEmpty()) {
 			try {
 				String imageUrl = uploadService.uploadImage(imageFile, "product_images");
-				System.out.println("imageUrl" + imageUrl);
 				product.setImage(imageUrl);
-				productDAO.save(product);
 			} catch (Exception e) {
 				return ResponseEntity.status(500).body("Upload image thất bại: " + e.getMessage());
 			}
 		}
-		return ResponseEntity.ok(product);
+		Products saved = productDAO.save(product);
+		return ResponseEntity.ok(saved);
 	}
 
-	@PutMapping("update/{id}")
-	public ResponseEntity<Products> update(@PathVariable("id") Integer id, @Valid @RequestBody Products product) {
+	@PutMapping(value = "update/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Products> updateJson(@PathVariable("id") Integer id, @Valid @RequestBody Products product) {
 		if (!productDAO.existsById(id)) {
 			return ResponseEntity.notFound().build();
 		}
-		productDAO.save(product);
-		return ResponseEntity.ok(product);
+		product.setProductid(id);
+		Products saved = productDAO.save(product);
+		return ResponseEntity.ok(saved);
+	}
+
+	@PutMapping(value = "update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<?> updateMultipart(
+			@PathVariable("id") Integer id,
+			@ModelAttribute("product") @Valid Products product,
+			@RequestParam(value = "imageFile", required = false) MultipartFile imageFile) {
+		if (!productDAO.existsById(id)) {
+			return ResponseEntity.notFound().build();
+		}
+
+		Products existing = productDAO.findById(id).orElse(null);
+		if (existing == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		product.setProductid(id);
+
+		// Keep current image if admin didn't upload a new one
+		if (imageFile != null && !imageFile.isEmpty()) {
+			try {
+				String imageUrl = uploadService.uploadImage(imageFile, "product_images");
+				product.setImage(imageUrl);
+			} catch (Exception e) {
+				return ResponseEntity.status(500).body(Map.of("error", "Upload image thất bại", "message", e.getMessage()));
+			}
+		} else {
+			product.setImage(existing.getImage());
+		}
+
+		Products saved = productDAO.save(product);
+		// Re-fetch to ensure relationships like categories are populated in response
+		return ResponseEntity.ok(productDAO.findById(saved.getProductid()).orElse(saved));
 	}
 
 	@DeleteMapping("delete/{id}")
@@ -95,8 +129,15 @@ public class Admin_ProductRestController {
 		if (!productDAO.existsById(id)) {
 			return ResponseEntity.notFound().build();
 		}
-		productDAO.deleteById(id);
-		return ResponseEntity.ok(Map.of("success", true, "message", "Deleted successfully"));
+		try {
+			productDAO.deleteById(id);
+			return ResponseEntity.ok(Map.of("success", true, "message", "Deleted successfully"));
+		} catch (DataIntegrityViolationException ex) {
+			return ResponseEntity.status(409).body(Map.of(
+					"success", false,
+					"error", "Cannot delete product because it is referenced by other records"
+			));
+		}
 	}
 
 	@GetMapping("search")

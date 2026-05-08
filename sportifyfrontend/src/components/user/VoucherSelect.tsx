@@ -96,7 +96,7 @@ const VoucherSelect: React.FC<VoucherSelectProps> = ({ username, tamtinh, onVouc
 
     try {
       const res = await fetch(
-        `${URL_BACKEND}/api/user/order/cart/voucher?voucherId=${encodeURIComponent(discountCode)}`,
+        `${URL_BACKEND}/api/user/order/cart/voucher?voucherOfUserId=${encodeURIComponent(String(currentVoucherId))}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -109,7 +109,7 @@ const VoucherSelect: React.FC<VoucherSelectProps> = ({ username, tamtinh, onVouc
 
       const data = await res.json();
       const discountPercent = data?.discountPercent ?? 0;
-      const voucherMsg = data?.voucherMsg || "";
+      const voucherMsg = data?.voucherMsg || data?.message || "";
 
       if (discountPercent > 0) {
         setAppliedCode(discountCode);

@@ -15,12 +15,14 @@ import com.google.gson.JsonObject;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 
@@ -52,8 +54,11 @@ public class GeminiServiceImpl implements AIService {
     @Value("${gemini.api.model:gemini-1.5-flash}")
     private String geminiModel;
 
-    @Value("${groq.api.key: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}")
+    @Value("${groq.api.key:}")
     private String groqApiKey;
+
+    @Value("${groq.api.model:llama-3.1-8b-instant}")
+    private String groqModel;
 
     @Autowired
     private ProductService productService;
@@ -66,8 +71,8 @@ public class GeminiServiceImpl implements AIService {
 
     @Override
     public String chat(String message) {
-        if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-            return "⚠️ Gemini API key chưa được cấu hình.";
+        if (groqApiKey == null || groqApiKey.isEmpty()) {
+            return "⚠️ Groq API key chưa được cấu hình.";
         }
 
         try {
@@ -161,32 +166,43 @@ public class GeminiServiceImpl implements AIService {
             System.out.println("🔵 Gọi Groq API với câu hỏi: " + message);
             System.out.println("📦 Dữ liệu đã gửi: " + (productHTML.isEmpty() ? 0 : products.size()) + " sản phẩm, " + fields.size() + " sân, " + (eventHTML.isEmpty() ? 0 : events.size()) + " sự kiện");
 
-            String response = callGeminiAPI(prompt);
+            String response = callGroqAPI(prompt);
             if (response != null) {
-                System.out.println("✅ Response nhận được từ Groq: " +   response);
+                System.out.println("✅ Response nhận được từ Groq");
                 return response;
             }
 
-            return "❌ Không nhận được phản hồi từ Groq";
+            return "❌ Không nhận được phản hồi từ Groq.";
+        } catch (HttpStatusCodeException ex) {
+            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                System.out.println("❌ Groq unauthorized: " + ex.getMessage());
+                return "😅 Groq API key không hợp lệ hoặc đã hết hạn (401). Hãy cập nhật groq.api.key trong application.properties.";
+            }
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
+                System.out.println("❌ Groq model not found: " + ex.getMessage());
+                return "😅 Groq model không tồn tại (404). Hãy kiểm tra groq.api.model.";
+            }
+            System.out.println("❌ HTTP Exception: " + ex.getStatusCode() + " - " + ex.getMessage());
+            return "😅 Groq tạm thời lỗi HTTP: " + ex.getStatusCode();
         } catch (Exception ex) {
             System.out.println("❌ Exception: " + ex.getClass().getName() + " - " + ex.getMessage());
             ex.printStackTrace();
-            return "😅 Có lỗi xảy ra: " + ex.getMessage();
+            return "😅 Có lỗi khi gọi Groq, vui lòng thử lại sau.";
         }
     }
 
-    /**
-     * Gọi Gemini API với retry logic
-     */
-    private String  callGeminiAPI(String prompt) throws Exception {
+    private String callGroqAPI(String prompt) {
+        if (groqApiKey == null || groqApiKey.trim().isEmpty()) {
+            throw new IllegalStateException("Thiếu groq.api.key trong cấu hình.");
+        }
+
         String url = "https://api.groq.com/openai/v1/chat/completions";
-        String model = "llama-3.1-8b-instant";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + groqApiKey);
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("model", model);
+        payload.put("model", groqModel);
 
         List<Map<String, String>> messages = new ArrayList<>();
         Map<String, String> message = new HashMap<>();
@@ -234,14 +250,14 @@ public class GeminiServiceImpl implements AIService {
                             : frontendUrl + "/user/images/default.png";
 
                     return String.format(
-                            "<div style=\"border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px; background: #fffacd; display: flex; gap: 10px; align-items: flex-start;\">"
+                            "<div style=\"border: 1px solid #e8f5e9; padding: 12px; margin: 8px 0; border-radius: 12px; background: linear-gradient(135deg,#ffffff 0%%,#f8fff8 100%%); display: flex; gap: 10px; align-items: flex-start;\">"
                                     +
                                     "<img src=\"%s\" alt=\"%s\" style=\"width: 80px; height: 80px; object-fit: cover; border-radius: 4px; flex-shrink: 0;\">"
                                     +
                                     "<div>" +
                                     "<strong>%s</strong> - %s VND<br>" +
                                     "%s<br>" +
-                                    "<a href=\"/sportify/product-single/%s\" style=\"color: #007bff; text-decoration: none; font-size: 12px; cursor: pointer;\" onclick=\"window.location.href='/sportify/product-single/%s'; return false;\">Xem sản phẩm</a>"
+                                    "<a href=\"/sportify/product/detail/%s\" style=\"display:inline-block;margin-top:6px;padding:6px 12px;background:#2e7d32;color:#fff;text-decoration:none;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;\" onclick=\"window.location.href='/sportify/product/detail/%s'; return false;\">Xem sản phẩm</a>"
                                     +
                                     "</div>" +
                                     "</div>",
@@ -347,8 +363,19 @@ public class GeminiServiceImpl implements AIService {
                         "4. Nếu câu hỏi về đội/sự kiện → cung cấp thông tin chi tiết\n" +
                         "5. Nếu câu hỏi về liên hệ/hỗ trợ → cung cấp thông tin liên lạc\n" +
                         "6. Nếu câu hỏi không liên quan → hãy trả lời một cách tự nhiên, thân thiện\n" +
-                        "7. Luôn trả lời bằng HTML để dễ đọc hơn\n" +
-                        "8. Sử dụng emoji để làm cho câu trả lời thêm sinh động",
+                        "7. Luôn trả lời bằng HTML rõ ràng, đẹp mắt; không dùng Markdown\n" +
+                        "8. Câu trả lời cần có bố cục dạng card hiện đại: tiêu đề, mô tả ngắn, danh sách gợi ý\n" +
+                        "9. Với mỗi sản phẩm được đề xuất, bắt buộc có nút/link CTA tới /sportify/product/detail/{productid}\n" +
+                        "10. Mỗi link sản phẩm cần dùng thẻ <a href=\"/sportify/product/detail/{id}\">Xem sản phẩm</a>\n" +
+                        "11. Nếu không có sản phẩm phù hợp, vẫn trả HTML đẹp và gợi ý câu hỏi tiếp theo\n" +
+                        "12. Ưu tiên câu ngắn gọn, có icon emoji tinh tế (không lạm dụng)\n" +
+                        "13. Mẫu HTML khuyến nghị:\n" +
+                        "<div style=\"background:#f7fff7;border:1px solid #d9f2dd;border-radius:12px;padding:12px;\">" +
+                        "<h3 style=\"margin:0 0 8px;color:#1b5e20;\">🎯 Gợi ý cho bạn</h3>" +
+                        "<p style=\"margin:0 0 8px;\">Nội dung tóm tắt...</p>" +
+                        "<ul style=\"margin:0;padding-left:18px;\"><li>Tên sản phẩm - giá</li></ul>" +
+                        "<a href=\"/sportify/product/detail/123\" style=\"display:inline-block;margin-top:8px;padding:6px 12px;background:#2e7d32;color:#fff;text-decoration:none;border-radius:999px;\">Xem sản phẩm</a>" +
+                        "</div>",
                 productHTML, fieldHTML, eventHTML, contactHTML, question);
     }
 

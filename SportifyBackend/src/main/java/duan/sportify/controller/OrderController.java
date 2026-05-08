@@ -1,6 +1,5 @@
 package duan.sportify.controller;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -29,6 +28,8 @@ import duan.sportify.dao.VoucherDAO;
 import duan.sportify.entities.Orderdetails;
 import duan.sportify.entities.Orders;
 import duan.sportify.entities.Voucher;
+import duan.sportify.entities.VoucherOfUser;
+import duan.sportify.Repository.VoucherOfUserRepository;
 import duan.sportify.service.OrderDetailService;
 import duan.sportify.service.OrderService;
 import duan.sportify.service.UserService;
@@ -45,6 +46,8 @@ public class OrderController {
 	VoucherDAO voucherDAO;
 	@Autowired
 	VoucherService voucherService;
+	@Autowired
+	VoucherOfUserRepository voucherOfUserRepository;
 	@Autowired
 	OrderDetailService orderDetailService;
 	@Autowired
@@ -151,10 +154,75 @@ public class OrderController {
 	}
 
 	@PostMapping("/order/cart/voucher")
-	public ResponseEntity<?> cartVoucher(@RequestParam String voucherId) {
+	public ResponseEntity<?> cartVoucher(
+			@RequestParam(required = false) String voucherId,
+			@RequestParam(required = false) Long voucherOfUserId,
+			HttpServletRequest request) {
+		if ((voucherId == null || voucherId.isBlank()) && voucherOfUserId == null) {
+			return ResponseEntity.badRequest().body(Map.of(
+					"success", false,
+					"message", "voucherId or voucherOfUserId is required"));
+		}
+
+		// Prefer validating by voucherOfUserId (the voucher user actually owns)
+		if (voucherOfUserId != null) {
+			String username = (String) request.getSession().getAttribute("username");
+			if (username == null) {
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+						.body(Map.of("success", false, "message", "User not logged in"));
+			}
+
+			VoucherOfUser vou = voucherOfUserRepository.findById(voucherOfUserId).orElse(null);
+			if (vou == null) {
+				return ResponseEntity.ok(Map.of(
+						"success", false,
+						"discountPercent", 0,
+						"voucherMsg", "Không tìm thấy voucher của user"));
+			}
+			if (vou.getUsername() == null || !vou.getUsername().equals(username)) {
+				return ResponseEntity.status(HttpStatus.FORBIDDEN)
+						.body(Map.of("success", false, "message", "Forbidden"));
+			}
+
+			ZoneId vnZone = ZoneId.of("Asia/Ho_Chi_Minh");
+			LocalDate currentDate = LocalDate.now(vnZone);
+			boolean isValidDate = (vou.getStartDate() == null || !vou.getStartDate().isAfter(currentDate))
+					&& (vou.getEndDate() == null || !vou.getEndDate().isBefore(currentDate));
+			boolean hasQuantity = vou.getQuantity() != null && vou.getQuantity() > 0;
+
+			Integer discountPercent = vou.getVoucherid() != null ? vou.getVoucherid().getDiscountpercent() : null;
+			if (!hasQuantity) {
+				return ResponseEntity.ok(Map.of(
+						"success", false,
+						"discountPercent", 0,
+						"voucherMsg", "Voucher đã hết lượt sử dụng"));
+			}
+			if (!isValidDate) {
+				return ResponseEntity.ok(Map.of(
+						"success", false,
+						"discountPercent", 0,
+						"voucherMsg", "Voucher đã hết hạn sử dụng"));
+			}
+			if (discountPercent == null || discountPercent <= 0) {
+				return ResponseEntity.ok(Map.of(
+						"success", false,
+						"discountPercent", 0,
+						"voucherMsg", "Voucher không hợp lệ"));
+			}
+
+			return ResponseEntity.ok(Map.of(
+					"success", true,
+					"voucherOfUserId", voucherOfUserId,
+					"voucherId", vou.getVoucherid() != null ? vou.getVoucherid().getVoucherid() : null,
+					"discountPercent", discountPercent,
+					"voucherMsg", "Voucher hợp lệ!"));
+		}
+
+		// Backward-compatible: validate by voucherId using DB CURDATE()
 		if (voucherId == null || voucherId.isBlank()) {
-			return ResponseEntity.badRequest()
-					.body(Map.of("success", false, "message", "voucherId is required"));
+			return ResponseEntity.badRequest().body(Map.of(
+					"success", false,
+					"message", "voucherId is required"));
 		}
 
 		Voucher voucher = voucherDAO.findByVoucherId(voucherId);
@@ -165,29 +233,21 @@ public class OrderController {
 					"message", "Không tìm thấy voucher '" + voucherId + "'"));
 		}
 
-		// Lấy ngày hiện tại và ngày hiệu lực của voucher
-		LocalDate currentDate = LocalDate.now();
-		LocalDate startDate = Instant.ofEpochMilli(voucher.getStartdate().getTime())
-				.atZone(ZoneId.systemDefault())
-				.toLocalDate();
-		LocalDate endDate = Instant.ofEpochMilli(voucher.getEnddate().getTime())
-				.atZone(ZoneId.systemDefault())
-				.toLocalDate();
-
-		boolean isValid = !startDate.isAfter(currentDate) && !endDate.isBefore(currentDate);
-
-		if (!isValid) {
+		// Validate using DB CURDATE() to avoid JVM timezone shifting issues with DATE columns.
+		Integer discount = voucherDAO.findActiveDiscountPercent(voucherId);
+		if (discount == null || discount <= 0) {
 			return ResponseEntity.ok(Map.of(
 					"success", false,
-					"message", "Voucher '" + voucherId + "' đã hết hạn sử dụng"));
+					"discountPercent", 0,
+					"voucherMsg", "Voucher '" + voucherId + "' đã hết hạn sử dụng"));
 		}
 
 		// Nếu hợp lệ
 		return ResponseEntity.ok(Map.of(
 				"success", true,
 				"voucherId", voucherId,
-				"discountPercent", voucher.getDiscountpercent(),
-				"message", "Voucher hợp lệ!"));
+				"discountPercent", discount,
+				"voucherMsg", "Voucher hợp lệ!"));
 	}
 
 	// Đếm số đơn đặt của user trong hôm nay

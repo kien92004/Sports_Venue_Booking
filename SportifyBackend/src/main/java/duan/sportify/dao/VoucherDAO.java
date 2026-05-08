@@ -34,4 +34,11 @@ public interface VoucherDAO extends JpaRepository<Voucher, String> {
 	@Query("SELECT v FROM Voucher v WHERE v.id = ?1")
 	Optional<Voucher> findById(String id);
 
+	@Query(value = "SELECT discountpercent FROM voucher "
+			+ "WHERE voucherid = :voucherId "
+			+ "AND startdate <= CURDATE() "
+			+ "AND enddate >= CURDATE() "
+			+ "LIMIT 1", nativeQuery = true)
+	Integer findActiveDiscountPercent(@Param("voucherId") String voucherId);
+
 }

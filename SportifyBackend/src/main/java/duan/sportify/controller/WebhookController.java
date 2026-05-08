@@ -1,5 +1,6 @@
 package duan.sportify.controller;
 
+import java.util.Date;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +43,14 @@ public class WebhookController {
     public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> payload) {
         try {
             System.out.println(">>> SEPAY WEBHOOK RECEIVED: " + payload);
-            String content = (String) payload.get("content");
-            if (content == null) {
+            String content = firstNonBlankString(payload,
+                    "content",
+                    "transaction_content",
+                    "transactionContent",
+                    "transaction-content",
+                    "noiDung",
+                    "description");
+            if (content == null || content.isBlank()) {
                 System.out.println(">>> Webhook ignored: No content found.");
                 return ResponseEntity.ok().build();
             }
@@ -191,16 +198,33 @@ public class WebhookController {
             }
             
             log.setGateway((String) payload.get("gateway"));
-            log.setAccountNumber((String) payload.get("accountNumber"));
+            log.setAccountNumber(firstNonBlankString(payload,
+                    "accountNumber",
+                    "account_number",
+                    "account",
+                    "accountNo"));
             log.setContent(content);
             
-            Object amountObj = payload.get("transferAmount");
-            if (amountObj != null) {
-                log.setTransferAmount(Double.parseDouble(amountObj.toString()));
+            Double transferAmount = firstDouble(payload,
+                    "transferAmount",
+                    "transfer_amount",
+                    "amount",
+                    "amount_in",
+                    "amountIn");
+            if (transferAmount != null) {
+                log.setTransferAmount(transferAmount);
             }
             
-            log.setReferenceCode((String) payload.get("referenceCode"));
-            log.setAccountName((String) payload.get("accountName"));
+            log.setReferenceCode(firstNonBlankString(payload,
+                    "referenceCode",
+                    "reference_code",
+                    "ref",
+                    "refCode"));
+            log.setAccountName(firstNonBlankString(payload,
+                    "accountName",
+                    "account_name",
+                    "senderName",
+                    "fromAccountName"));
             
             String dateStr = (String) payload.get("transactionDate");
             if (dateStr != null) {
@@ -213,10 +237,38 @@ public class WebhookController {
             } else {
                 log.setTransactionDate(new java.util.Date());
             }
+            log.setLogDate(new Date());
             
             paymentLogDAO.save(log);
         } catch (Exception le) {
             System.err.println(">>> ERROR saving PaymentLog: " + le.getMessage());
         }
+    }
+
+    private String firstNonBlankString(Map<String, Object> payload, String... keys) {
+        for (String key : keys) {
+            Object v = payload.get(key);
+            if (v == null) continue;
+            String s = String.valueOf(v).trim();
+            if (!s.isBlank() && !"null".equalsIgnoreCase(s) && !"undefined".equalsIgnoreCase(s)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    private Double firstDouble(Map<String, Object> payload, String... keys) {
+        for (String key : keys) {
+            Object v = payload.get(key);
+            if (v == null) continue;
+            try {
+                String s = String.valueOf(v).trim();
+                if (s.isBlank()) continue;
+                return Double.parseDouble(s);
+            } catch (Exception ignore) {
+                // continue
+            }
+        }
+        return null;
     }
 }

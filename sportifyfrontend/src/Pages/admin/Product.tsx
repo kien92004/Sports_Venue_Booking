@@ -164,28 +164,56 @@ const ProductPage: React.FC = () => {
   // Edit product handler
   const handleEditProduct = () => {
     if (!form.productid) return;
+    const formData = new FormData();
+    Object.entries(form).forEach(([key, value]) => {
+      if (
+        value !== undefined &&
+        value !== null &&
+        key !== "image" &&
+        key !== "categories"
+      ) {
+        if (typeof value === "boolean") {
+          formData.append(key, value ? "true" : "false");
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
+    if (imageFile) {
+      formData.append("imageFile", imageFile);
+    }
+
     fetch(`${URL_BACKEND}/rest/products/update/${form.productid}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: formData,
     })
       .then(async res => {
         if (!res.ok) {
-          const err = await res.json();
-          setErrors((err.errors || []).map((msg: string) => ({ message: msg })));
-          return;
+          let err: any = null;
+          try {
+            err = await res.json();
+          } catch {
+            // ignore
+          }
+          const msgs: string[] = err?.errors || (err?.message ? [err.message] : ["Cập nhật sản phẩm thất bại"]);
+          setErrors(msgs.map((msg: string) => ({ message: msg })));
+          return null;
         }
         return res.json();
       })
       .then(data => {
+        if (!data) return;
         alert("Cập nhật sản phẩm thành công");
-        if (data) {
-          setProducts(prev => prev.map(p => p.productid === data.productid ? data : p));
-          setAllProducts(prev => prev.map(p => p.productid === data.productid ? data : p));
-          setShowEdit(false);
-          setForm({});
-          setErrors([]);
-        }
+        setProducts(prev => prev.map(p => p.productid === data.productid ? data : p));
+        setAllProducts(prev => prev.map(p => p.productid === data.productid ? data : p));
+        setShowEdit(false);
+        setForm({});
+        setErrors([]);
+        setImageFile(null);
+      })
+      .catch(err => {
+        console.error("[Product Update] failed", err);
+        alert("Đã xảy ra lỗi khi cập nhật sản phẩm");
       });
   };
 
@@ -194,12 +222,27 @@ const ProductPage: React.FC = () => {
     fetch(`${URL_BACKEND}/rest/products/delete/${productid}`, {
       method: "DELETE",
     })
-      .then(res => res.json())
+      .then(async res => {
+        const payload = await res.json().catch(() => null);
+        if (!res.ok) {
+          const msg =
+            payload?.error ||
+            payload?.message ||
+            "Không thể xóa sản phẩm (có thể sản phẩm đã phát sinh đơn hàng).";
+          throw new Error(msg);
+        }
+        return payload;
+      })
       .then(() => {
         alert("Xóa sản phẩm thành công");
         setProducts(prev => prev.filter(p => p.productid !== productid));
         setAllProducts(prev => prev.filter(p => p.productid !== productid));
         setShowEdit(false);
+        setImageFile(null);
+      })
+      .catch(err => {
+        console.error("[Product Delete] failed", err);
+        alert(err?.message || "Xóa sản phẩm thất bại");
       });
   };
 
@@ -208,6 +251,7 @@ const ProductPage: React.FC = () => {
     setForm(product);
     setShowEdit(true);
     setErrors([]);
+    setImageFile(null);
   };
 
   // Handle form change
