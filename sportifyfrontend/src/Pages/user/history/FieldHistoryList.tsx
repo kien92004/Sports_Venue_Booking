@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import getImageUrl from "../../../helper/getImageUrl";
 
 type BookingInfo = {
@@ -18,6 +18,8 @@ type BookingInfo = {
 const statusColor = (status: string) => {
   if (status === "Hoàn Thành") return "#39AEA9";
   if (status === "Đã Cọc") return "#FFA41B";
+  if (status === "Đã Thanh Toán") return "#28a745";
+  if (status === "Chưa Thanh Toán") return "#dc3545";
   if (status === "Hủy Đặt") return "red";
   return "#6C757D";
 };
@@ -46,21 +48,39 @@ const LichSuDatSan: React.FC = () => {
   const [processingIds, setProcessingIds] = useState<number[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  useEffect(() => {
+  const fetchHistory = useCallback(() => {
     const URL_BACKEND = import.meta.env.VITE_BACKEND_URL;
-    fetch(`${URL_BACKEND}/api/user/field/profile/historybooking`, {
+    return fetch(`${URL_BACKEND}/api/user/field/profile/historybooking`, {
       method: "GET",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load booking history");
+        return res.json();
+      })
       .then((data) => {
         setListBooking(Array.isArray(data?.listbooking) ? data.listbooking : []);
       })
       .catch(() => setListBooking([]));
   }, []);
+
+  useEffect(() => {
+    fetchHistory();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchHistory();
+      }
+    };
+    window.addEventListener("focus", fetchHistory);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", fetchHistory);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [fetchHistory]);
 
   const handleDelete = async (bookingId: number) => {
     if (processingIds.includes(bookingId) || bulkDeleting) return;

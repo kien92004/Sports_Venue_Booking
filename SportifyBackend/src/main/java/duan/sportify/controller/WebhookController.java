@@ -16,8 +16,9 @@ import duan.sportify.entities.Users;
 import duan.sportify.entities.PaymentLog;
 import duan.sportify.dao.PaymentLogDAO;
 import duan.sportify.service.BookingService;
-import duan.sportify.service.OrderService;
 import duan.sportify.service.MailerService;
+import duan.sportify.service.OrderService;
+import duan.sportify.service.PaymentConfirmationService;
 import duan.sportify.service.UserService;
 
 @RestController
@@ -38,6 +39,9 @@ public class WebhookController {
 
     @Autowired
     private PaymentLogDAO paymentLogDAO;
+
+    @Autowired
+    private PaymentConfirmationService paymentConfirmationService;
 
     @PostMapping("/sepay")
     public ResponseEntity<?> handleSePayWebhook(@RequestBody Map<String, Object> payload) {
@@ -71,14 +75,13 @@ public class WebhookController {
                         
                         Bookings booking = bookingService.findByBookingid(bookingId);
                         if (booking != null) {
-                            if (!"Đã Thanh Toán".equals(booking.getBookingstatus())) {
-                                booking.setBookingstatus("Đã Thanh Toán");
-                                booking.setPaymentdate(new java.util.Date());
-                                bookingService.update(booking);
+                            Double transferAmount = firstDouble(payload,
+                                    "transferAmount", "transfer_amount", "amount", "amount_in", "amountIn");
+                            boolean updated = paymentConfirmationService.confirmFieldPayment(bookingId, transferAmount);
+                            if (updated) {
                                 System.out.println(">>> SUCCESS: Confirmed payment for booking FIELD_" + bookingId);
-                                
-                                // Gửi email thông báo
-                                sendBookingSuccessEmail(booking, bookingId);
+                                Bookings confirmed = bookingService.findByBookingid(bookingId);
+                                sendBookingSuccessEmail(confirmed != null ? confirmed : booking, bookingId);
                             } else {
                                 System.out.println(">>> INFO: Booking FIELD_" + bookingId + " was already paid.");
                             }
@@ -112,14 +115,9 @@ public class WebhookController {
                         
                         Orders order = orderService.findById(orderId);
                         if (order != null) {
-                            if (order.getPaymentstatus() == null || !order.getPaymentstatus()) {
-                                order.setOrderstatus("Đã Thanh Toán");
-                                order.setPaymentstatus(true);
-                                order.setPaymentdate(new java.util.Date());
-                                orderService.update(order);
+                            boolean updated = paymentConfirmationService.confirmCartPayment(orderId);
+                            if (updated) {
                                 System.out.println(">>> SUCCESS: Confirmed payment for order CART_" + orderId);
-                                
-                                // Gửi email thông báo
                                 sendOrderSuccessEmail(order, orderId);
                             } else {
                                 System.out.println(">>> INFO: Order CART_" + orderId + " was already paid.");

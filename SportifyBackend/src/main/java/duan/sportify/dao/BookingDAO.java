@@ -15,12 +15,12 @@ public interface BookingDAO extends JpaRepository<Bookings, Integer> {
 
 	@Query(value = "SELECT " +
 			"b.bookingid, " +
-			"ANY_VALUE(b.bookingdate) AS bookingdate, " +
-			"ANY_VALUE(b.bookingprice) AS bookingprice, " +
-			"ANY_VALUE(b.note) AS note, " +
-			"ANY_VALUE(b.bookingstatus) AS bookingstatus, " +
-			"ANY_VALUE(COALESCE(f.namefield, f2.namefield)) AS field_name, " +
-			"ANY_VALUE(COALESCE(f.image, f2.image)) AS field_image, " +
+			"MAX(b.bookingdate) AS bookingdate, " +
+			"MAX(b.bookingprice) AS bookingprice, " +
+			"MAX(b.note) AS note, " +
+			"MAX(b.bookingstatus) AS bookingstatus, " +
+			"MAX(COALESCE(f.namefield, f2.namefield)) AS field_name, " +
+			"MAX(COALESCE(f.image, f2.image)) AS field_image, " +
 			"COALESCE(MIN(p.start_date), MIN(bd.playdate)) AS start_date, " +
 			"COALESCE(MAX(p.end_date), MAX(bd.playdate)) AS end_date, " +
 			"GROUP_CONCAT(p.day_of_week ORDER BY p.day_of_week ASC) AS day_of_weeks, " +
@@ -34,7 +34,7 @@ public interface BookingDAO extends JpaRepository<Bookings, Integer> {
 			"LEFT JOIN field AS f2 ON p.field_id = f2.fieldid " +
 			"WHERE b.username = :username " +
 			"GROUP BY b.bookingid " +
-			"ORDER BY bookingdate DESC " +
+			"ORDER BY MAX(b.bookingdate) DESC " +
 			"LIMIT 20", nativeQuery = true)
 	List<Object[]> getBookingInfoByUsername(@Param("username") String username);
 

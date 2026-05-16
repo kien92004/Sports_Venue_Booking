@@ -68,11 +68,10 @@ export default function PaymentResult() {
             <div className="card shadow-lg border-0">
               <div className="card-header bg-white border-0 text-center py-4">
                 <div className="d-flex align-items-center justify-content-center mb-3">
-                  <img 
-                    src="/user/images/iconVNP.png" 
-                    alt="VNPAY" 
-                    className="me-3"
-                    style={{ width: "60px", height: "60px" }}
+                  <i
+                    className="fa fa-qrcode text-danger me-3"
+                    style={{ fontSize: "48px" }}
+                    aria-hidden="true"
                   />
                   <h2 className="text-primary fw-bold mb-0">Kết Quả Thanh Toán</h2>
                   <img 
@@ -179,7 +178,7 @@ export default function PaymentResult() {
               <div className="card-footer bg-light text-center py-3">
                 <small className="text-muted">
                   <i className="fa fa-shield me-1"></i>
-                  Giao dịch được bảo mật bởi VNPAY
+                  Giao dịch được xác nhận qua VietQR (SePay)
                 </small>
               </div>
             </div>

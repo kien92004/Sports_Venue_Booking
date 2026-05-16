@@ -106,7 +106,7 @@ const CheckoutCartItems: React.FC = () => {
       formData.append('paymentMethod', 'saved_card');
       formData.append('cardId', selectedCardId);
     } else {
-      formData.append('paymentMethod', 'vnpay');
+      formData.append('paymentMethod', 'vietqr');
     }
 
     try {

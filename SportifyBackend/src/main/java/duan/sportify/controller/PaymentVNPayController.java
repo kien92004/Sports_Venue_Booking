@@ -56,6 +56,7 @@ import duan.sportify.service.OrderDetailService;
 import duan.sportify.service.OrderService;
 import duan.sportify.service.ProductService;
 import duan.sportify.service.UserService;
+import duan.sportify.service.PaymentConfirmationService;
 import duan.sportify.service.VNPayService;
 import duan.sportify.service.VoucherOfUserService;
 
@@ -101,6 +102,9 @@ public class PaymentVNPayController {
 
 	@Autowired
 	private VNPayService vnPayService;
+
+	@Autowired
+	private PaymentConfirmationService paymentConfirmationService;
 
 	@Autowired
 	private duan.sportify.service.FieldService fieldService;
@@ -439,17 +443,12 @@ public class PaymentVNPayController {
 						"Hoàn Thành".equals(booking.getBookingstatus()))) {
 						isPaid = true;
 					} 
-					// 2. Fallback: Nếu bảng Bookings chưa cập nhật nhưng đã có Log giao dịch (Admin thấy)
+					// 2. Fallback: log SePay hoặc sync API — cập nhật trạng thái đặt sân
 					else {
-						if (hasPaymentLog(orderId, "FIELD") || (forceSync && hasRecentAmountMatch(amount, "FIELD"))) {
-							System.out.println(">>> Fallback: Found transaction log for " + orderId + ". Updating booking status.");
+						if (hasPaymentLog(orderId, "FIELD") || (forceSync && hasRecentAmountMatch(amount, orderId))) {
+							System.out.println(">>> Fallback: Found payment for " + orderId + ". Updating booking status.");
+							paymentConfirmationService.confirmFieldPayment(bookingId, amount);
 							isPaid = true;
-							// Tự động cập nhật lại bảng Bookings nếu chưa cập nhật
-							if (booking != null && !"Đã Thanh Toán".equals(booking.getBookingstatus())) {
-								booking.setBookingstatus("Đã Thanh Toán");
-								booking.setPaymentdate(new java.util.Date());
-								bookingService.update(booking);
-							}
 						}
 					}
 				} catch (Exception e) {
@@ -465,17 +464,12 @@ public class PaymentVNPayController {
 						"Đã Thanh Toán".equals(order.getOrderstatus()))) {
 						isPaid = true;
 					}
-					// 2. Fallback: Kiểm tra qua Log giao dịch
+					// 2. Fallback: log SePay hoặc sync API — cập nhật đơn hàng
 					else {
-						if (hasPaymentLog(orderId, "CART") || (forceSync && hasRecentAmountMatch(amount, "CART"))) {
-							System.out.println(">>> Fallback: Found transaction log for " + orderId + ". Updating order status.");
+						if (hasPaymentLog(orderId, "CART") || (forceSync && hasRecentAmountMatch(amount, orderId))) {
+							System.out.println(">>> Fallback: Found payment for " + orderId + ". Updating order status.");
+							paymentConfirmationService.confirmCartPayment(cartOrderId);
 							isPaid = true;
-							if (order != null && (order.getPaymentstatus() == null || !order.getPaymentstatus())) {
-								order.setOrderstatus("Đã Thanh Toán");
-								order.setPaymentstatus(true);
-								order.setPaymentdate(new java.util.Date());
-								ordersService.update(order);
-							}
 						}
 					}
 				} catch (Exception e) {
@@ -486,12 +480,12 @@ public class PaymentVNPayController {
 		return ResponseEntity.ok(Collections.singletonMap("isPaid", isPaid));
 	}
 
-	private boolean hasRecentAmountMatch(Double amount, String type) {
-		if (amount == null || amount <= 0) {
+	private boolean hasRecentAmountMatch(Double amount, String orderId) {
+		if (amount == null || amount <= 0 || orderId == null || orderId.isBlank()) {
 			return false;
 		}
 
-		double epsilon = 1000.0; // cho phép lệch nhỏ do phí/làm tròn
+		double epsilon = 1000.0;
 		Date since = new Date(System.currentTimeMillis() - 15 * 60 * 1000L);
 		List<duan.sportify.entities.PaymentLog> logs = paymentLogDAO.findRecentByAmountRange(
 				amount - epsilon,
@@ -501,15 +495,23 @@ public class PaymentVNPayController {
 			return false;
 		}
 
+		String orderRefUpper = orderId.toUpperCase();
+		String numericPart = orderId.contains("_") ? orderId.substring(orderId.indexOf('_') + 1) : "";
+
 		for (duan.sportify.entities.PaymentLog log : logs) {
 			String content = log.getContent() != null ? log.getContent().toUpperCase() : "";
-			if ("FIELD".equals(type) && content.contains("FIELD")) {
+			if (content.contains(orderRefUpper)) {
 				return true;
 			}
-			if ("CART".equals(type) && (content.contains("CART")
-					|| content.contains("GIO HANG")
-					|| content.contains("DON HANG"))) {
-				return true;
+			if (!numericPart.isEmpty() && content.contains(numericPart)) {
+				if (orderId.startsWith("FIELD_") && content.contains("FIELD")) {
+					return true;
+				}
+				if (orderId.startsWith("CART_") && (content.contains("CART")
+						|| content.contains("GIO HANG")
+						|| content.contains("DON HANG"))) {
+					return true;
+				}
 			}
 		}
 		return false;
@@ -517,6 +519,7 @@ public class PaymentVNPayController {
 
 	private void trySyncFromSePay(String orderId, Double amount) {
 		if (sepayApiToken == null || sepayApiToken.isBlank()) {
+			applyPaymentConfirmationFromLogs(orderId, amount);
 			return;
 		}
 		try {
@@ -555,24 +558,53 @@ public class PaymentVNPayController {
 				if (!contentUpper.contains(orderRefUpper)) {
 					continue;
 				}
-				if (hasPaymentLog(orderId, orderId.startsWith("FIELD_") ? "FIELD" : "CART")) {
-					return;
+				String logType = orderId.startsWith("FIELD_") ? "FIELD" : "CART";
+				if (!hasPaymentLog(orderId, logType)) {
+					duan.sportify.entities.PaymentLog log = new duan.sportify.entities.PaymentLog();
+					log.setTransactionId(parseLong(tx.path("id").asText(null)));
+					log.setGateway(tx.path("gateway").asText("SEPAY"));
+					log.setAccountNumber(tx.path("account_number").asText(tx.path("accountNumber").asText(null)));
+					log.setContent(content);
+					log.setTransferAmount(transferAmount);
+					log.setReferenceCode(tx.path("reference_code").asText(tx.path("referenceCode").asText(null)));
+					log.setAccountName(tx.path("account_name").asText(tx.path("accountName").asText(null)));
+					log.setTransactionDate(new Date());
+					log.setLogDate(new Date());
+					paymentLogDAO.save(log);
 				}
-				duan.sportify.entities.PaymentLog log = new duan.sportify.entities.PaymentLog();
-				log.setTransactionId(parseLong(tx.path("id").asText(null)));
-				log.setGateway(tx.path("gateway").asText("SEPAY"));
-				log.setAccountNumber(tx.path("account_number").asText(tx.path("accountNumber").asText(null)));
-				log.setContent(content);
-				log.setTransferAmount(transferAmount);
-				log.setReferenceCode(tx.path("reference_code").asText(tx.path("referenceCode").asText(null)));
-				log.setAccountName(tx.path("account_name").asText(tx.path("accountName").asText(null)));
-				log.setTransactionDate(new Date());
-				log.setLogDate(new Date());
-				paymentLogDAO.save(log);
+				applyPaymentConfirmation(orderId, transferAmount > 0 ? transferAmount : amount);
 				return;
 			}
 		} catch (Exception e) {
 			System.err.println("SePay force sync failed: " + e.getMessage());
+		}
+		applyPaymentConfirmationFromLogs(orderId, amount);
+	}
+
+	private void applyPaymentConfirmationFromLogs(String orderId, Double amount) {
+		if (orderId == null) {
+			return;
+		}
+		String logType = orderId.startsWith("FIELD_") ? "FIELD" : "CART";
+		if (hasPaymentLog(orderId, logType)) {
+			applyPaymentConfirmation(orderId, amount);
+		}
+	}
+
+	private void applyPaymentConfirmation(String orderId, Double amount) {
+		if (orderId == null) {
+			return;
+		}
+		try {
+			if (orderId.startsWith("FIELD_")) {
+				Integer bookingId = Integer.parseInt(orderId.substring(6));
+				paymentConfirmationService.confirmFieldPayment(bookingId, amount);
+			} else if (orderId.startsWith("CART_")) {
+				Integer cartOrderId = Integer.parseInt(orderId.substring(5));
+				paymentConfirmationService.confirmCartPayment(cartOrderId);
+			}
+		} catch (NumberFormatException e) {
+			System.err.println("Invalid orderId for payment confirmation: " + orderId);
 		}
 	}
 

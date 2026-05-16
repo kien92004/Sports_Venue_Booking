@@ -36,12 +36,12 @@ const PaymentExpression: React.FC<PaymentExpressionProps> = ({
                   setSelectedCardId(undefined);
                 }}
               />
-              <img
-                style={{ width: "24px", height: "24px", marginRight: "6px" }}
-                src="/user/images/iconVNP.png"
-                alt="VNPay"
+              <i
+                className="fa fa-qrcode"
+                style={{ fontSize: "24px", marginRight: "6px", color: "#e3001b" }}
+                aria-hidden="true"
               />
-              <span>VNPay</span>
+              <span>VietQR</span>
             </label>
 
             <label className="flex items-center cursor-pointer">

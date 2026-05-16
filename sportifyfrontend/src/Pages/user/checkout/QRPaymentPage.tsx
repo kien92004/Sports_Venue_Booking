@@ -59,9 +59,9 @@ const QRPaymentPage: React.FC = () => {
       }
     };
 
-    // Check ngay lập tức để không phải chờ chu kỳ đầu
-    checkStatus();
-    const intervalId = setInterval(checkStatus, 1200); // check nhanh hơn để phản hồi 3-4 giây
+    // Check ngay + đồng bộ SePay để cập nhật lịch sử đặt sân sớm
+    checkStatus(true);
+    const intervalId = setInterval(() => checkStatus(false), 1200);
     // Sau 3.5 giây nếu chưa nhận webhook thì chủ động sync SePay 1 lần
     const forceSyncTimer = setTimeout(() => checkStatus(true), 3500);
 
